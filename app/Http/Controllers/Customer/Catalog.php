@@ -113,6 +113,7 @@ class Catalog extends Controller
             'shop' => (new ShopCardResource($shop))->resolve() + [
                 'joined_at' => $shop->created_at?->toIso8601String(),
                 'template' => $shop->template,
+                'decoration' => $shop->decoration ?? [],
             ],
             'products' => ProductCardResource::collection($products)->response()->getData(true),
             'filters' => ['q' => $request->query('q'), 'sort' => $request->query('sort', 'best_selling')],

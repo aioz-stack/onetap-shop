@@ -13,16 +13,32 @@ const sortLabels = { newest: 'Newest', price_asc: 'Price: low to high', price_de
 export default function Shop({ shop, products, filters, sorts }) {
   const { auth } = usePage().props;
   const [term, setTerm] = useState(filters.q ?? '');
+  const template = shop.template ?? 'classic';
+  const accent = /^#[0-9a-fA-F]{6}$/.test(shop.decoration?.accent_color ?? '') ? shop.decoration.accent_color : '#0f9d76';
   const go = (updates) => router.get(withQuery(updates, `/shops/${shop.slug}`), {}, { preserveScroll: true });
 
   return (
     <CustomerLayout>
       <Head title={shop.name} />
 
+      {shop.decoration?.announcement && (
+        <p className="mb-4 rounded-xl px-4 py-2.5 text-center text-sm font-medium text-white" style={{ backgroundColor: accent }}>
+          {shop.decoration.announcement}
+        </p>
+      )}
       <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-        <div className="h-28 bg-gradient-to-r from-brand-700 to-brand-500 sm:h-36">{shop.banner_url && <img src={shop.banner_url} alt="" className="h-full w-full object-cover" />}</div>
-        <div className="flex flex-col gap-4 px-5 pb-5 sm:flex-row sm:items-end sm:justify-between">
-          <div className="-mt-8 flex items-end gap-4">
+        {template !== 'minimal' && (
+          <div className={`relative ${template === 'spotlight' ? 'h-44 sm:h-60' : 'h-28 sm:h-36'}`} style={{ background: `linear-gradient(90deg, ${accent}, ${accent}aa)` }}>
+            {shop.banner_url && <img src={shop.banner_url} alt="" className="h-full w-full object-cover" />}
+            {template === 'spotlight' && (
+              <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent p-5">
+                <p className="text-2xl font-bold text-white sm:text-3xl">{shop.name}</p>
+              </div>
+            )}
+          </div>
+        )}
+        <div className={`flex flex-col gap-4 px-5 pb-5 sm:flex-row sm:items-end sm:justify-between ${template === 'minimal' ? 'pt-5' : ''}`}>
+          <div className={`${template === 'minimal' ? '' : '-mt-8'} flex items-end gap-4`}>
             <div className="rounded-full border-4 border-white dark:border-gray-900">
               <ShopLogo shop={shop} size="h-20 w-20" />
             </div>
