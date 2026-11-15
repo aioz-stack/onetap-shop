@@ -2,7 +2,7 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import AuthShell from '../../Components/AuthShell';
 import { Button, Checkbox, FormField, PasswordInput, TextInput } from '../../Components/ui';
 
-export default function Register() {
+export default function Register({ referralCode }) {
   const { data, setData, post, processing, errors, reset } = useForm({
     name: '',
     username: '',
@@ -10,7 +10,7 @@ export default function Register() {
     phone: '',
     password: '',
     password_confirmation: '',
-    referral_code: '',
+    referral_code: referralCode ?? '',
     terms: false,
   });
 

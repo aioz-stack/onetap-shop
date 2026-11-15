@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import AppIcon from '../Components/AppIcon';
 import ThemeToggle from '../Components/ThemeToggle';
@@ -6,11 +6,17 @@ import UserMenu from '../Components/UserMenu';
 import Toast from '../Components/ui/Toast';
 
 function SearchBar({ className = '' }) {
-  const [term, setTerm] = useState(() => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('q') ?? '');
+  const { url } = usePage();
+  const current = new URLSearchParams(url.split('?')[1] ?? '').get('q') ?? '';
+  const [term, setTerm] = useState(current);
+
+  useEffect(() => {
+    setTerm(current);
+  }, [current]);
 
   const submit = (event) => {
     event.preventDefault();
-    router.get('/', term ? { q: term } : {}, { preserveState: true });
+    router.get('/search', term.trim() ? { q: term.trim() } : {});
   };
 
   return (
@@ -34,12 +40,26 @@ function SearchBar({ className = '' }) {
   );
 }
 
+function IconLink({ href, icon, label, count }) {
+  return (
+    <Link href={href} aria-label={count ? `${label} (${count})` : label} title={label} className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5">
+      <AppIcon name={icon} className="h-6 w-6" />
+      {count > 0 && (
+        <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[11px] font-bold text-white">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 /**
- * Public storefront shell: header with search, category strip, footer.
+ * Public storefront shell: header with search, cart and account, category strip, footer.
  */
-export default function CustomerLayout({ categories = [], children }) {
-  const { auth, marketplace } = usePage().props;
+export default function CustomerLayout({ children }) {
+  const { auth, marketplace, counts, categoryNav } = usePage().props;
   const user = auth?.user;
+  const isCustomer = user?.roles?.includes('customer');
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-950">
@@ -54,7 +74,9 @@ export default function CustomerLayout({ categories = [], children }) {
                 Seller Center
               </Link>
             ) : (
-              <span>Sell on Onetap — coming soon</span>
+              <Link href={user ? '/account/sell' : '/register'} className="hover:text-white">
+                Sell on Onetap
+              </Link>
             )}
             <span aria-hidden="true">·</span>
             <span>Cash on Delivery available</span>
@@ -71,23 +93,18 @@ export default function CustomerLayout({ categories = [], children }) {
 
           <SearchBar className="hidden flex-1 md:block" />
 
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <ThemeToggle className="hidden sm:flex" />
-            <span
-              className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-400 dark:text-gray-600"
-              title="Cart opens in Phase 4"
-              aria-label="Cart (coming soon)"
-            >
-              <AppIcon name="cart" className="h-6 w-6" />
-            </span>
+            {isCustomer && <IconLink href="/account/notifications" icon="bell" label="Notifications" count={counts?.notifications} />}
+            <IconLink href={user ? '/cart' : '/login'} icon="cart" label="Cart" count={counts?.cart} />
             {user ? (
               <UserMenu />
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5">
                   Log in
                 </Link>
-                <Link href="/register" className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600">
+                <Link href="/register" className="hidden rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 sm:block">
                   Sign up
                 </Link>
               </div>
@@ -99,13 +116,13 @@ export default function CustomerLayout({ categories = [], children }) {
           <SearchBar />
         </div>
 
-        {categories.length > 0 && (
+        {categoryNav?.length > 0 && (
           <nav aria-label="Categories" className="border-t border-gray-100 dark:border-gray-800">
             <ul className="no-scrollbar mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4">
-              {categories.map((category) => (
+              {categoryNav.map((category) => (
                 <li key={category.id}>
                   <Link
-                    href={`/?category=${category.slug}`}
+                    href={`/search?category=${category.slug}`}
                     className="block whitespace-nowrap px-3 py-2.5 text-sm text-gray-600 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400"
                   >
                     {category.name}
@@ -124,27 +141,46 @@ export default function CustomerLayout({ categories = [], children }) {
           <div>
             <img className="h-7 dark:hidden" src="/images/logo/logo.svg" alt="Onetap" />
             <img className="hidden h-7 dark:block" src="/images/logo/logo-dark.svg" alt="Onetap" />
-            <p className="mt-3 max-w-xs text-sm text-gray-500 dark:text-gray-400">
-              A marketplace for neighborhood businesses, with local riders delivering to your door.
-            </p>
+            <p className="mt-3 max-w-xs text-sm text-gray-500 dark:text-gray-400">A marketplace for neighborhood businesses, with local riders delivering to your door.</p>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">Shop</h3>
             <ul className="mt-3 space-y-2 text-sm text-gray-500 dark:text-gray-400">
-              <li>Categories</li>
-              <li>Popular shops</li>
-              <li>Cash on Delivery</li>
+              <li>
+                <Link href="/search" className="hover:text-brand-600">
+                  All products
+                </Link>
+              </li>
+              <li>
+                <Link href="/search?sort=best_selling" className="hover:text-brand-600">
+                  Best sellers
+                </Link>
+              </li>
+              <li>
+                <Link href={user ? '/account/sell' : '/register'} className="hover:text-brand-600">
+                  Sell on Onetap
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-800 dark:text-white/90">Account</h3>
             <ul className="mt-3 space-y-2 text-sm text-gray-500 dark:text-gray-400">
               {user ? (
-                <li>
-                  <Link href={user.home} className="hover:text-brand-600">
-                    My dashboard
-                  </Link>
-                </li>
+                <>
+                  {isCustomer && (
+                    <li>
+                      <Link href="/account/orders" className="hover:text-brand-600">
+                        My purchases
+                      </Link>
+                    </li>
+                  )}
+                  <li>
+                    <Link href={user.home} className="hover:text-brand-600">
+                      My dashboard
+                    </Link>
+                  </li>
+                </>
               ) : (
                 <>
                   <li>

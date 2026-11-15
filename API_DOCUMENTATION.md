@@ -23,6 +23,29 @@ User object: `id, name, username, email, phone, profile_picture_url, status, rol
 ### GET /api/v1/categories ✅ (public)
 Active top-level categories with active `children[]`, ordered by `sort_order`.
 
+### Catalog ✅ (public)
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | /products | `q`, `category` (slug, includes sub-categories), `shop` (slug), `min`, `max`, `in_stock=1`, `sort` (relevance, newest, price_asc, price_desc, best_selling, top_rated), `per_page` ≤ 50. Card shape: `id, name, slug, price, max_price, compare_at_price, image_url, rating_avg, rating_count, sold_count, in_stock, shop{}` |
+| GET | /products/{slug} | `variations[] {id, label, options, price, compare_at_price, available, is_default}`, `images[]`, `price_range`, `shop{}`, `category{}`. 404 unless live in an active shop |
+| GET | /shops | `q`; ordered by completed orders |
+| GET | /shops/{slug} | Active shops only |
+
+### Customer ✅ (Bearer, customer role)
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET / PUT | /customer/profile | PUT: `name, email, phone` |
+| GET / POST | /customer/addresses | POST: `recipient_name, phone (PH mobile), region, province, city, barangay, street, postal_code?, label?, is_default?` → 201 |
+| PUT / DELETE | /customer/addresses/{id} | Owner only (404 otherwise); there is always exactly one default |
+| GET | /cart | `?address_id=` for delivery quotes. Returns `{groups: [{shop, items[], subtotal, shipping{fee, covered, free}, total}], summary}` |
+| POST | /cart/items | `variation_id, quantity` → 201 with the cart. 422 if out of stock, unavailable, on vacation or your own shop |
+| PATCH / DELETE | /cart/items/{id} | PATCH: `quantity?`, `is_selected?` |
+| POST | /orders | `address_id, payment_method (cod), notes?` → 201 `{order_number, grand_total, shipping_total, seller_orders[]}`. Checks out the selected cart items; one seller order per shop. 422 on stock, COD limit or other method. Throttled 10/min |
+| GET | /orders | `?tab=unpaid,to_ship,shipping,completed,cancelled,return_refund`; paginated seller orders |
+| GET | /orders/{id} | Seller order with items, address, timeline, shipment, refund, `can{cancel, confirm_received, request_refund, review}` |
+| POST | /orders/{id}/cancel | `reason`; only while Unpaid or Pending; releases stock |
+| POST | /orders/{id}/confirm-received | Delivered → Completed; posts commission and the seller's pending earning |
+
 ## Planned
 
 - Base path: `/api/v1`

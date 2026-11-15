@@ -7,6 +7,7 @@ use App\Models\ProductCategory;
 use App\Services\Administration\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -39,6 +40,7 @@ class Categories extends Controller
         $validated = $this->validated($request);
         $category = ProductCategory::query()->create($validated + ['slug' => $this->uniqueSlug($validated['name'], $validated['parent_id'] ?? null)]);
         $this->auditLogger->log('category.created', $category, newValues: $validated);
+        Cache::forget('storefront.category-nav');
 
         return back()->with('success', "Category “{$category->name}” added.");
     }
@@ -54,6 +56,7 @@ class Categories extends Controller
         $old = $category->only(array_keys($validated));
         $category->update($validated);
         $this->auditLogger->log('category.updated', $category, $old, $validated);
+        Cache::forget('storefront.category-nav');
 
         return back()->with('success', 'Category updated.');
     }
@@ -66,6 +69,7 @@ class Categories extends Controller
 
         $this->auditLogger->log('category.deleted', $category, $category->only(['name', 'slug', 'parent_id']));
         $category->delete();
+        Cache::forget('storefront.category-nav');
 
         return back()->with('success', 'Category deleted.');
     }

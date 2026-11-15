@@ -2,14 +2,18 @@
 
 use App\Models\LogisticsPartner;
 use App\Models\Permission;
+use App\Models\Product;
 use App\Models\Role;
 use App\Models\Shop;
 use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
+
+beforeEach(fn () => Storage::fake('public'));
 
 test('the database seeder is idempotent', function () {
     $this->seed();
@@ -20,7 +24,8 @@ test('the database seeder is idempotent', function () {
 
     expect($counts())->toBe($first)
         ->and(Role::count())->toBe(5)
-        ->and(User::count())->toBe(5);
+        ->and(User::count())->toBe(7)
+        ->and(Product::count())->toBe(18);
 });
 
 test('demo accounts are wired to their profiles', function () {
@@ -43,8 +48,8 @@ test('dashboards read their numbers from the database', function () {
     $this->actingAs(User::where('username', 'admin')->first())
         ->get('/admin')
         ->assertInertia(fn (Assert $page) => $page
-            ->where('stats.customers', 2)
-            ->where('stats.sellers', 1)
+            ->where('stats.customers', 4)
+            ->where('stats.sellers', 3)
             ->where('stats.logisticsPartners', 1)
             ->where('stats.riders', 1)
         );

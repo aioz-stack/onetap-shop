@@ -13,9 +13,9 @@ Legend: ⬜ not started · 🟨 in progress · ✅ implemented **and tested**
 | Admin — Logistics | Partners, riders, coverage, pickup/shipment/COD monitoring, delivery fees | 3 | ✅ |
 | Admin — Finance | Revenue, seller earnings, commission, logistics fees, settlements, remittances, reports | 3 | ✅ |
 | Admin — Settings | General, branding, payment, shipping, notifications, API, security, audit logs | 3 | ✅ |
-| Customer — Storefront | Home (banners, categories, featured, recommended, shops, best sellers, new), search, listing, product detail | 4 | ⬜ |
-| Customer — Cart & Checkout | Seller-grouped cart, select items, shipping fee, COD checkout | 4 | ⬜ |
-| Customer — Account | Profile + photo, addresses, purchases, tracking, reviews, refunds, cancellations, notifications, chat, security, verification | 4 | ⬜ |
+| Customer — Storefront | Home (banners, categories, featured, recommended, shops, best sellers, new), search, listing, product detail | 4 | ✅ |
+| Customer — Cart & Checkout | Seller-grouped cart, select items, shipping fee, COD checkout | 4 | ✅ |
+| Customer — Account | Profile + photo, addresses, purchases, tracking, reviews, refunds, cancellations, notifications, chat, security, verification | 4 | ✅ |
 | Seller — Dashboard | Sales, orders, balance, analytics | 5 | ⬜ |
 | Seller — Products | Status tabs, add/edit/delete, variations, inventory | 5 | ⬜ |
 | Seller — Orders | Status tabs, process, ready for pickup, cancel, returns | 5 | ⬜ |
@@ -33,5 +33,5 @@ Legend: ⬜ not started · 🟨 in progress · ✅ implemented **and tested**
 | Rider — Deliveries | Full status flow + failure statuses | 7 | ⬜ |
 | Rider — Proof of Delivery | Photo capture/upload, recipient, timestamp, GPS | 7 | ⬜ |
 | Rider — COD | Collection, daily remittance, history, discrepancies | 7 | ⬜ |
-| API v1 | Endpoints in API_DOCUMENTATION.md (auth + categories done) | 2–8 | 🟨 |
+| API v1 | Endpoints in API_DOCUMENTATION.md (auth, catalog, customer shopping done) | 2–8 | 🟨 |
 | End-to-end workflow | Order → seller → logistics → rider → delivered → COD → finance | 8–9 | ⬜ |

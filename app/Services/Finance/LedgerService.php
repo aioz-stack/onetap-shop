@@ -85,7 +85,8 @@ class LedgerService
     }
 
     /**
-     * Take money back from the seller, from pending first and then available. Balances may not go negative.
+     * Take money back from the seller, from pending first and then available.
+     * The available balance may go negative: the seller then owes the marketplace and later earnings cover it.
      */
     public function clawBack(Shop $shop, string $amount): SellerBalance
     {

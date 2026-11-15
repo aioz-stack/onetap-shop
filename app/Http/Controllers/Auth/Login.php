@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\Administration\AuditLogger;
 use App\Services\Administration\SettingsService;
 use App\Services\Identity\LoginService;
@@ -65,7 +66,31 @@ class Login extends Controller
         $request->session()->regenerate();
         $this->loginService->recordLogin($user, 'web');
 
-        return redirect()->intended(route($user->homeRouteName()));
+        return redirect()->to($this->destinationFor($request, $user));
+    }
+
+    /**
+     * The page the user was trying to reach, unless it belongs to a panel their role cannot open.
+     */
+    private function destinationFor(Request $request, User $user): string
+    {
+        $home = route($user->homeRouteName());
+        $intended = $request->session()->pull('url.intended');
+
+        if (! $intended) {
+            return $home;
+        }
+
+        $path = '/'.ltrim((string) parse_url($intended, PHP_URL_PATH), '/');
+        $panels = ['/admin' => 'admin', '/seller' => 'seller', '/logistics' => 'logistics', '/rider' => 'rider', '/account' => 'customer', '/cart' => 'customer', '/checkout' => 'customer'];
+
+        foreach ($panels as $prefix => $role) {
+            if (($path === $prefix || str_starts_with($path, $prefix.'/')) && ! $user->hasRole($role)) {
+                return $home;
+            }
+        }
+
+        return $intended;
     }
 
     /**

@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+### 2026-11-16 — Phase 4 (Customer Panel)
+
+**Added**
+- **Storefront:** home sections from live data, search with filters and sorts, product pages (gallery, variations, stock, reviews, related), shop pages.
+- **Cart and checkout:** cart grouped by seller with per-shop delivery quotes from partner coverage, and a COD checkout that splits orders per shop, reserves stock and fixes commission in one transaction.
+- **My Account:** purchases with tracking, cancel, order received, returns, reviews, notifications, chat with shops (auto-greeting), profile and photo, addresses, security (password, sessions), verification upload, and the seller application.
+- **Services:** `CartService`, `ShippingFeeService`, `CheckoutService`, `CustomerOrderService`, `EarningsService` (completion postings and hold release), `ReviewService`, `ChatService`, `AccountService`, `Storefront`.
+- **Notifications:** `OrderPlaced`, `NewSellerOrder`, and `OrderStatusUpdated` (sent after commit).
+- **`onetap:release-earnings`** command, scheduled hourly.
+- **Migration:** `seller_orders.earnings_released_at`.
+- **API:** catalog and customer endpoints (profile, addresses, cart, orders).
+- **`DemoCatalogSeeder`** (local only): 3 shops, 18 products, images, banners.
+- 43 feature tests (169 total).
+
+**Fixed**
+- Login no longer returns users to a page their role can't open.
+- An N+1 lazy load in checkout.
+- A stale relation in the seller application.
+- A chat page crash caused by the Promise from `scrollIntoView()`.
+
 ### 2026-11-15 — Phase 3 (Admin Panel)
 
 **Added**

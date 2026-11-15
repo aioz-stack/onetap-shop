@@ -8,7 +8,7 @@ import { isActivePath } from '../lib/navigation';
  */
 export default function Sidebar({ sidebarToggle, nav = [], panelLabel, homeHref = '/dashboard' }) {
   const { url, props } = usePage();
-  const counts = props.adminCounts ?? {};
+  const counts = props.adminCounts ?? props.sellerCounts ?? {};
 
   return (
     <aside

@@ -123,4 +123,12 @@ class Shop extends Model
     {
         return $this->hasMany(ShopAutoReply::class);
     }
+
+    /**
+     * @return HasMany<Transaction, $this>
+     */
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
 }

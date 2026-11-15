@@ -5,6 +5,7 @@ namespace App\Services\Ordering;
 use App\Enums\SellerOrderStatus;
 use App\Models\SellerOrder;
 use App\Models\User;
+use App\Notifications\OrderStatusUpdated;
 use App\Services\Administration\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -63,6 +64,15 @@ class OrderStatusService
             ]);
 
             $this->auditLogger->log('order.status_changed', $order, ['status' => $current->value], ['status' => $next->value, 'note' => $note], $actor);
+
+            // Tell the customer once the change is committed, unless they made it themselves.
+            DB::afterCommit(function () use ($order, $actor) {
+                $customer = $order->order()->first()?->customer;
+
+                if ($customer && ! $customer->is($actor) && OrderStatusUpdated::messageFor($order->status)) {
+                    $customer->notify(new OrderStatusUpdated($order));
+                }
+            });
 
             return $order;
         });

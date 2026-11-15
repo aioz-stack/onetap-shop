@@ -132,6 +132,22 @@ class User extends Authenticatable
     }
 
     /**
+     * @return BelongsToMany<Conversation, $this>
+     */
+    public function conversations(): BelongsToMany
+    {
+        return $this->belongsToMany(Conversation::class, 'conversation_participants')->withPivot('last_read_at')->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<ProductReview, $this>
+     */
+    public function productReviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    /**
      * @return HasMany<VerificationDocument, $this>
      */
     public function verificationDocuments(): HasMany

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin;
+use App\Http\Controllers\Auth\ConfirmPassword;
 use App\Http\Controllers\Auth\Login;
 use App\Http\Controllers\Auth\Register;
 use App\Http\Controllers\CRUD;
@@ -14,6 +15,61 @@ use Inertia\Inertia;
 
 // Public storefront.
 Route::get('/', [Customer\Home::class, 'index'])->name('home');
+Route::get('/search', [Customer\Catalog::class, 'search'])->name('search');
+Route::get('/products/{slug}', [Customer\Catalog::class, 'product'])->name('products.show');
+Route::get('/shops/{slug}', [Customer\Catalog::class, 'shop'])->name('shops.show');
+
+// Shopping and My Account (customers, including sellers who also buy).
+Route::middleware(['auth', 'active', 'role:customer'])->group(function () {
+    Route::get('/cart', [Customer\Cart::class, 'index'])->name('cart.index');
+    Route::post('/cart/items', [Customer\Cart::class, 'store'])->name('cart.store');
+    Route::patch('/cart/items/{item}', [Customer\Cart::class, 'update'])->name('cart.update');
+    Route::delete('/cart/items/{item}', [Customer\Cart::class, 'destroy'])->name('cart.destroy');
+    Route::post('/cart/select', [Customer\Cart::class, 'select'])->name('cart.select');
+
+    Route::get('/checkout', [Customer\Checkout::class, 'show'])->name('checkout.show');
+    Route::post('/checkout', [Customer\Checkout::class, 'store'])->middleware('throttle:10,1')->name('checkout.store');
+    Route::get('/checkout/success/{orderNumber}', [Customer\Checkout::class, 'success'])->name('checkout.success');
+
+    Route::prefix('account')->name('account.')->group(function () {
+        Route::redirect('/', '/account/orders');
+        Route::get('profile', [Customer\Account\Profile::class, 'edit'])->name('profile');
+        Route::post('profile', [Customer\Account\Profile::class, 'update'])->name('profile.update');
+
+        Route::get('addresses', [Customer\Account\Addresses::class, 'index'])->name('addresses.index');
+        Route::post('addresses', [Customer\Account\Addresses::class, 'store'])->name('addresses.store');
+        Route::put('addresses/{address}', [Customer\Account\Addresses::class, 'update'])->name('addresses.update');
+        Route::delete('addresses/{address}', [Customer\Account\Addresses::class, 'destroy'])->name('addresses.destroy');
+        Route::post('addresses/{address}/default', [Customer\Account\Addresses::class, 'makeDefault'])->name('addresses.default');
+
+        Route::get('orders', [Customer\Account\Orders::class, 'index'])->name('orders.index');
+        Route::get('orders/{order}', [Customer\Account\Orders::class, 'show'])->name('orders.show');
+        Route::post('orders/{order}/cancel', [Customer\Account\Orders::class, 'cancel'])->name('orders.cancel');
+        Route::post('orders/{order}/confirm', [Customer\Account\Orders::class, 'confirm'])->name('orders.confirm');
+        Route::post('orders/{order}/refund', [Customer\Account\Orders::class, 'refund'])->name('orders.refund');
+        Route::post('items/{item}/review', [Customer\Account\Orders::class, 'review'])->name('items.review');
+        Route::get('cancellations', [Customer\Account\Orders::class, 'cancellations'])->name('cancellations');
+        Route::get('refunds', [Customer\Account\Orders::class, 'refunds'])->name('refunds');
+        Route::get('reviews', [Customer\Account\Orders::class, 'reviews'])->name('reviews');
+
+        Route::get('notifications', [Customer\Account\Notifications::class, 'index'])->name('notifications');
+        Route::get('notifications/{id}', [Customer\Account\Notifications::class, 'open'])->name('notifications.open');
+        Route::post('notifications/read-all', [Customer\Account\Notifications::class, 'readAll'])->name('notifications.read-all');
+
+        Route::get('chat', [Customer\Account\Chat::class, 'index'])->name('chat.index');
+        Route::get('chat/{conversation}', [Customer\Account\Chat::class, 'index'])->name('chat.show');
+        Route::post('chat/{conversation}', [Customer\Account\Chat::class, 'send'])->middleware('throttle:30,1')->name('chat.send');
+        Route::post('chat/shops/{shop}', [Customer\Account\Chat::class, 'start'])->name('chat.start');
+
+        Route::get('security', [Customer\Account\Security::class, 'edit'])->name('security');
+        Route::put('security/password', [Customer\Account\Security::class, 'password'])->name('security.password');
+        Route::post('security/sign-out-others', [Customer\Account\Security::class, 'signOutOthers'])->name('security.sign-out-others');
+        Route::get('verification', [Customer\Account\Security::class, 'verification'])->name('verification');
+        Route::post('verification', [Customer\Account\Security::class, 'uploadVerification'])->name('verification.store');
+        Route::get('sell', [Customer\Account\Security::class, 'sellerApplication'])->name('sell');
+        Route::post('sell', [Customer\Account\Security::class, 'applyToSell'])->name('sell.store');
+    });
+});
 
 // Guests only.
 Route::middleware('guest')->group(function () {
@@ -111,8 +167,66 @@ Route::middleware(['auth', 'active'])->group(function () {
     // Starter user CRUD, kept for admins until Phase 3 replaces it with full user management.
     Route::resource('crud', CRUD::class)->names('crud')->middleware('role:admin');
 
-    Route::prefix('seller')->name('seller.')->middleware('role:seller')->group(function () {
+    // Re-enter password before sensitive pages (Laravel's password.confirm middleware).
+    Route::get('/confirm-password', [ConfirmPassword::class, 'show'])->name('password.confirm');
+    Route::post('/confirm-password', [ConfirmPassword::class, 'store'])->middleware('throttle:6,1')->name('password.confirm.store');
+
+    Route::prefix('seller')->name('seller.')->middleware(['role:seller', 'seller.shop'])->group(function () {
         Route::get('/', [Seller\Dashboard::class, 'index'])->name('dashboard');
+
+        Route::get('products', [Seller\Products::class, 'index'])->name('products.index');
+        Route::get('products/create', [Seller\Products::class, 'create'])->name('products.create');
+        Route::post('products', [Seller\Products::class, 'store'])->name('products.store');
+        Route::get('products/{product}/edit', [Seller\Products::class, 'edit'])->name('products.edit');
+        Route::post('products/{product}', [Seller\Products::class, 'update'])->name('products.update');
+        Route::delete('products/{product}', [Seller\Products::class, 'destroy'])->name('products.destroy');
+        foreach (['submit', 'unpublish', 'republish'] as $action) {
+            Route::post("products/{product}/{$action}", [Seller\Products::class, $action])->name("products.{$action}");
+        }
+        Route::get('inventory', [Seller\Products::class, 'inventory'])->name('inventory');
+        Route::post('inventory/{variation}', [Seller\Products::class, 'adjustStock'])->name('inventory.adjust');
+
+        Route::get('orders', [Seller\Orders::class, 'index'])->name('orders.index');
+        Route::get('orders/{order}', [Seller\Orders::class, 'show'])->name('orders.show');
+        foreach (['accept', 'ready', 'cancel'] as $action) {
+            Route::post("orders/{order}/{$action}", [Seller\Orders::class, $action])->name("orders.{$action}");
+        }
+
+        Route::get('shop', [Seller\ShopSettings::class, 'edit'])->name('shop.edit');
+        Route::put('shop', [Seller\ShopSettings::class, 'update'])->name('shop.update');
+        Route::post('shop/branding', [Seller\ShopSettings::class, 'branding'])->name('shop.branding');
+        Route::put('shop/vacation', [Seller\ShopSettings::class, 'vacation'])->name('shop.vacation');
+
+        Route::get('chat', [Seller\CustomerService::class, 'inbox'])->name('chat.index');
+        Route::get('chat/{conversation}', [Seller\CustomerService::class, 'inbox'])->name('chat.show');
+        Route::post('chat/{conversation}', [Seller\CustomerService::class, 'send'])->middleware('throttle:60,1')->name('chat.send');
+        Route::get('auto-replies', [Seller\CustomerService::class, 'autoReplies'])->name('auto-replies.index');
+        Route::post('auto-replies', [Seller\CustomerService::class, 'storeAutoReply'])->name('auto-replies.store');
+        Route::put('auto-replies/{reply}', [Seller\CustomerService::class, 'updateAutoReply'])->name('auto-replies.update');
+        Route::delete('auto-replies/{reply}', [Seller\CustomerService::class, 'destroyAutoReply'])->name('auto-replies.destroy');
+        Route::get('reviews', [Seller\CustomerService::class, 'reviews'])->name('reviews.index');
+        Route::post('reviews/{review}/reply', [Seller\CustomerService::class, 'replyToReview'])->name('reviews.reply');
+
+        Route::get('vouchers', [Seller\Marketing::class, 'vouchers'])->name('vouchers.index');
+        Route::post('vouchers', [Seller\Marketing::class, 'storeVoucher'])->name('vouchers.store');
+        Route::put('vouchers/{voucher}', [Seller\Marketing::class, 'updateVoucher'])->name('vouchers.update');
+        Route::delete('vouchers/{voucher}', [Seller\Marketing::class, 'destroyVoucher'])->name('vouchers.destroy');
+        Route::get('promotions', [Seller\Marketing::class, 'promotions'])->name('promotions.index');
+        Route::post('promotions', [Seller\Marketing::class, 'storePromotion'])->name('promotions.store');
+        Route::put('promotions/{promotion}', [Seller\Marketing::class, 'updatePromotion'])->name('promotions.update');
+        Route::delete('promotions/{promotion}', [Seller\Marketing::class, 'destroyPromotion'])->name('promotions.destroy');
+        Route::get('referrals', [Seller\Marketing::class, 'referrals'])->name('referrals');
+
+        // Money pages require a recent password confirmation.
+        Route::prefix('finance')->name('finance.')->middleware('password.confirm')->group(function () {
+            Route::get('/', [Seller\Finance::class, 'overview'])->name('overview');
+            Route::get('statement', [Seller\Finance::class, 'statement'])->name('statement');
+            Route::get('transactions', [Seller\Finance::class, 'transactions'])->name('transactions');
+            Route::post('bank-accounts', [Seller\Finance::class, 'storeBankAccount'])->name('bank-accounts.store');
+            Route::post('bank-accounts/{account}/default', [Seller\Finance::class, 'defaultBankAccount'])->name('bank-accounts.default');
+            Route::delete('bank-accounts/{account}', [Seller\Finance::class, 'destroyBankAccount'])->name('bank-accounts.destroy');
+            Route::post('withdrawals', [Seller\Finance::class, 'withdraw'])->middleware('throttle:10,1')->name('withdrawals.store');
+        });
     });
 
     Route::prefix('logistics')->name('logistics.')->middleware('role:logistics')->group(function () {

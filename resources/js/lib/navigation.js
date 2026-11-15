@@ -62,18 +62,34 @@ export const sellerNav = [
   {
     heading: 'Selling',
     items: [
-      { label: 'Products', icon: 'box' },
-      { label: 'Orders', icon: 'receipt' },
-      { label: 'Shop', icon: 'store' },
-      { label: 'Marketing', icon: 'megaphone' },
+      { label: 'Orders', href: '/seller/orders', icon: 'receipt', badge: 'toShip' },
+      { label: 'Products', href: '/seller/products', icon: 'box' },
+      { label: 'Inventory', href: '/seller/inventory', icon: 'layers' },
+      { label: 'Shop Settings', href: '/seller/shop', icon: 'store' },
     ],
   },
   {
-    heading: 'Support & Money',
+    heading: 'Customer Service',
     items: [
-      { label: 'Customer Service', icon: 'chat' },
-      { label: 'Reviews', icon: 'star' },
-      { label: 'Finance', icon: 'wallet' },
+      { label: 'Chat', href: '/seller/chat', icon: 'chat', badge: 'messages' },
+      { label: 'Auto-replies', href: '/seller/auto-replies', icon: 'bell' },
+      { label: 'Reviews', href: '/seller/reviews', icon: 'star' },
+    ],
+  },
+  {
+    heading: 'Marketing',
+    items: [
+      { label: 'Vouchers', href: '/seller/vouchers', icon: 'tag' },
+      { label: 'Promotions', href: '/seller/promotions', icon: 'megaphone' },
+      { label: 'Referrals', href: '/seller/referrals', icon: 'users' },
+    ],
+  },
+  {
+    heading: 'Finance',
+    items: [
+      { label: 'Balance & Payouts', href: '/seller/finance', icon: 'wallet', exact: true },
+      { label: 'Income Statement', href: '/seller/finance/statement', icon: 'chart' },
+      { label: 'Transactions', href: '/seller/finance/transactions', icon: 'clipboard' },
     ],
   },
 ];

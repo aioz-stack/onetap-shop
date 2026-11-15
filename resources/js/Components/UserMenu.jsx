@@ -72,6 +72,19 @@ export default function UserMenu({ compact = false }) {
                 Marketplace
               </Link>
             </li>
+            {user.roles?.includes('customer') &&
+              [
+                ['My purchases', '/account/orders', 'receipt'],
+                ['Chat', '/account/chat', 'chat'],
+                ['My account', '/account/profile', 'user'],
+              ].map(([label, href, iconName]) => (
+                <li key={href}>
+                  <Link href={href} className="flex items-center gap-3 rounded-lg px-3 py-2 text-theme-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5">
+                    <AppIcon name={iconName} className="h-4.5 w-4.5" />
+                    {label}
+                  </Link>
+                </li>
+              ))}
             {available.map((panel) => (
               <li key={panel.role}>
                 <Link

@@ -14,9 +14,9 @@ class Register extends Controller
 {
     public function __construct(private RegistrationService $registrationService) {}
 
-    public function create(): Response
+    public function create(\Illuminate\Http\Request $request): Response
     {
-        return Inertia::render('Auth/Register');
+        return Inertia::render('Auth/Register', ['referralCode' => strtoupper(substr((string) $request->query('ref'), 0, 20)) ?: null]);
     }
 
     /**

@@ -24,6 +24,7 @@ class SellerOrder extends Model
         'items_subtotal',
         'shipping_fee',
         'discount',
+        'voucher_id',
         'total',
         'commission_rate',
         'commission_amount',
@@ -34,6 +35,7 @@ class SellerOrder extends Model
         'shipped_at',
         'delivered_at',
         'completed_at',
+        'earnings_released_at',
         'cancelled_at',
     ];
 
@@ -55,6 +57,7 @@ class SellerOrder extends Model
             'shipped_at' => 'datetime',
             'delivered_at' => 'datetime',
             'completed_at' => 'datetime',
+            'earnings_released_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
     }
@@ -113,5 +116,13 @@ class SellerOrder extends Model
     public function commission(): HasOne
     {
         return $this->hasOne(Commission::class);
+    }
+
+    /**
+     * @return BelongsTo<Voucher, $this>
+     */
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(Voucher::class);
     }
 }

@@ -21,7 +21,10 @@ dataset('panels', [
 ]);
 
 test('each panel opens for its own role', function (string $path, RoleName $role, string $component) {
-    $this->actingAs(User::factory()->withRole($role)->create())
+    // The Seller Center also needs an approved seller profile with a shop.
+    $user = $role === RoleName::Seller ? App\Models\Shop::factory()->create()->sellerProfile->user : User::factory()->withRole($role)->create();
+
+    $this->actingAs($user)
         ->get($path)
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component($component));
@@ -45,13 +48,18 @@ test('guests are sent to login from every panel', function (string $path) {
 })->with('panels');
 
 test('a user with several roles can open each of their panels', function () {
-    $user = User::factory()->withRole(RoleName::Customer, RoleName::Seller)->create();
+    $user = App\Models\Shop::factory()->create()->sellerProfile->user;
+    expect($user->roleNames())->toEqualCanonicalizing(['customer', 'seller']);
 
     $this->actingAs($user)->get('/seller')->assertOk();
     $this->actingAs($user)->get('/')->assertOk();
     $this->actingAs($user)->get('/admin')->assertForbidden();
 
     expect($user->fresh()->homeRouteName())->toBe('seller.dashboard');
+});
+
+test('a seller role without an approved shop cannot open the seller center', function () {
+    $this->actingAs(User::factory()->withRole(RoleName::Seller)->create())->get('/seller')->assertForbidden();
 });
 
 test('permissions follow the role assignments', function () {

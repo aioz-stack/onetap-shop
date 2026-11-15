@@ -3,10 +3,14 @@
 namespace App\Models;
 
 use App\Enums\ProductStatus;
+use App\Enums\ShopStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
@@ -92,5 +96,37 @@ class Product extends Model
     public function violations(): HasMany
     {
         return $this->hasMany(ProductViolation::class);
+    }
+
+    /**
+     * Products customers may see: live, in an active (not deleted) shop.
+     *
+     * @param  Builder<Product>  $query
+     */
+    public function scopeVisible(Builder $query): void
+    {
+        $query->where('products.status', ProductStatus::Live)
+            ->whereHas('shop', fn (Builder $shops) => $shops->where('status', ShopStatus::Active));
+    }
+
+    /**
+     * @return HasOne<ProductImage, $this>
+     */
+    public function primaryImage(): HasOne
+    {
+        return $this->hasOne(ProductImage::class)->orderByDesc('is_primary')->orderBy('sort_order');
+    }
+    /**
+     * Promotions running right now, best discount first.
+     *
+     * @return BelongsToMany<Promotion, $this>
+     */
+    public function activePromotions(): BelongsToMany
+    {
+        return $this->belongsToMany(Promotion::class, 'promotion_products')
+            ->where('promotions.is_active', true)
+            ->where(fn ($query) => $query->whereNull('promotions.starts_at')->orWhere('promotions.starts_at', '<=', now()))
+            ->where(fn ($query) => $query->whereNull('promotions.ends_at')->orWhere('promotions.ends_at', '>=', now()))
+            ->orderByDesc('promotions.discount_percent');
     }
 }

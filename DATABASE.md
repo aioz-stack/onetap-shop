@@ -192,4 +192,6 @@ erDiagram
 | 2026-11-15 | `2026_11_15_100100` → `101000` | RBAC, logistics partners, profiles, catalog, marketing, ordering, shipments, finance, communication, administration (every table above) |
 | 2026-11-15 | `2026_11_15_133215_create_personal_access_tokens_table` | Sanctum |
 
-All in batch 1 on `onetap-shop` (63 tables). Additions from the table list above: `promotion_products`, `voucher_redemptions`, `shop_auto_replies`, `banners`, and `bank_accounts.account_last4` (the full number is stored with an encrypted cast).
+| 2026-11-16 | `2026_11_16_100000_add_earnings_released_at_to_seller_orders` | seller_orders.earnings_released_at + index(status, earnings_released_at), batch 2 |
+
+The first 15 are in batch 1 on `onetap-shop` (63 tables). Additions from the table list above: `promotion_products`, `voucher_redemptions`, `shop_auto_replies`, `banners`, and `bank_accounts.account_last4` (the full number is stored with an encrypted cast).

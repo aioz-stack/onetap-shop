@@ -13,12 +13,14 @@ use App\Models\Shipment;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->withoutVite();
+    Storage::fake('public');
     $this->seed(DatabaseSeeder::class);
     $this->admin = User::where('username', 'admin')->first();
 });
