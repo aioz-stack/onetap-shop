@@ -7,20 +7,19 @@ use App\Enums\ShipmentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\LogisticsPartner;
 use App\Models\ServiceArea;
-use App\Services\Administration\AuditLogger;
+use App\Services\Logistics\CoverageService;
 use App\Services\Logistics\LogisticsPartnerService;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class LogisticsPartners extends Controller
 {
-    public function __construct(private LogisticsPartnerService $partners, private AuditLogger $auditLogger) {}
+    public function __construct(private LogisticsPartnerService $partners, private CoverageService $coverage) {}
 
     public function index(Request $request): Response
     {
@@ -107,9 +106,7 @@ class LogisticsPartners extends Controller
 
     public function storeArea(Request $request, LogisticsPartner $partner): RedirectResponse
     {
-        $validated = $this->areaRules($request, $partner);
-        $area = $partner->serviceAreas()->create($validated);
-        $this->auditLogger->log('service_area.created', $area, newValues: $validated);
+        $this->coverage->save($partner, $this->coverage->validated($request, $partner), $request->user());
 
         return back()->with('success', 'Coverage area added.');
     }
@@ -117,19 +114,14 @@ class LogisticsPartners extends Controller
     public function updateArea(Request $request, LogisticsPartner $partner, ServiceArea $area): RedirectResponse
     {
         abort_unless($area->logistics_partner_id === $partner->id, 404);
-        $validated = $this->areaRules($request, $partner, $area);
-        $old = $area->only(array_keys($validated));
-        $area->update($validated);
-        $this->auditLogger->log('service_area.updated', $area, $old, $validated);
+        $this->coverage->save($partner, $this->coverage->validated($request, $partner, $area), $request->user(), $area);
 
         return back()->with('success', 'Coverage area updated.');
     }
 
-    public function destroyArea(LogisticsPartner $partner, ServiceArea $area): RedirectResponse
+    public function destroyArea(Request $request, LogisticsPartner $partner, ServiceArea $area): RedirectResponse
     {
-        abort_unless($area->logistics_partner_id === $partner->id, 404);
-        $this->auditLogger->log('service_area.deleted', $area, $area->only(['city', 'barangay', 'delivery_fee']));
-        $area->delete();
+        $this->coverage->delete($partner, $area, $request->user());
 
         return back()->with('success', 'Coverage area removed.');
     }
@@ -148,34 +140,5 @@ class LogisticsPartners extends Controller
             'base_delivery_fee' => ['required', 'numeric', 'min:0', 'max:10000'],
             'status' => ['required', Rule::enum(PartnerStatus::class)],
         ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function areaRules(Request $request, LogisticsPartner $partner, ?ServiceArea $area = null): array
-    {
-        $validated = $request->validate([
-            'region' => ['required', 'string', 'max:100'],
-            'province' => ['required', 'string', 'max:100'],
-            'city' => ['required', 'string', 'max:100'],
-            'barangay' => ['nullable', 'string', 'max:100'],
-            'delivery_fee' => ['nullable', 'numeric', 'min:0', 'max:10000'],
-            'is_active' => ['boolean'],
-        ]);
-
-        $duplicate = $partner->serviceAreas()
-            ->where('city', $validated['city'])
-            ->where(fn ($query) => filled($validated['barangay'] ?? null) ? $query->where('barangay', $validated['barangay']) : $query->whereNull('barangay'))
-            ->when($area, fn ($query) => $query->whereKeyNot($area->id))
-            ->exists();
-
-        if ($duplicate) {
-            throw ValidationException::withMessages(['city' => 'This partner already covers that area.']);
-        }
-
-        $validated['barangay'] = filled($validated['barangay'] ?? null) ? $validated['barangay'] : null;
-
-        return $validated;
     }
 }

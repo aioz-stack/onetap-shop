@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureAccountActive;
+use App\Http\Middleware\EnsureLogisticsPartner;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureSellerShop;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureRole::class,
             'active' => EnsureAccountActive::class,
             'seller.shop' => EnsureSellerShop::class,
+            'logistics.partner' => EnsureLogisticsPartner::class,
         ]);
 
         // Signed-in users visiting guest pages go to their own panel; guests go to the login page.

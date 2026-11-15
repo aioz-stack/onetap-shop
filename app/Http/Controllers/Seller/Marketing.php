@@ -10,6 +10,7 @@ use App\Services\Administration\AuditLogger;
 use App\Services\Marketing\VoucherService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -132,7 +133,7 @@ class Marketing extends SellerController
     public function referrals(Request $request): Response
     {
         $user = $request->user();
-        $profile = $user->customerProfile()->firstOrCreate([], ['referral_code' => strtoupper(\Illuminate\Support\Str::random(8))]);
+        $profile = $user->customerProfile()->firstOrCreate([], ['referral_code' => strtoupper(Str::random(8))]);
         $referred = CustomerProfile::query()->where('referred_by', $user->id)->with('user:id,name,created_at')->latest('id')->get();
 
         return Inertia::render('Seller/Marketing/Referrals', [

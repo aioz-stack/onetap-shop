@@ -112,6 +112,9 @@ storefront layout (top header + search + category nav + footer). Rider layout is
 | `Finance\WithdrawalService` | Payout lifecycle: request holds funds, approve, paid writes the ledger, reject refunds the hold |
 | `Finance\FinanceReportService` | Revenue recognised at seller-order completion |
 | `Catalog\SellerApprovalService`, `Catalog\ProductModerationService` | Seller and product standing |
+| `Logistics\ShipmentStatusService` | Every shipment status change: delivery-flow map in `ShipmentStatus::allowedTransitions()`, history with GPS, seller-order sync (picked up → Shipping, delivered → Delivered, returned → Returned) |
+| `Logistics\DispatchService` / `RiderService` / `CoverageService` | Rider assignment and reassignment, admin routing to a partner, rider lifecycle and performance, service areas |
+| `Finance\RemittanceService` | Rider COD remittances: submit, then confirm (ledger) or dispute |
 | `Identity\UserAccountService` | Staff accounts, role sync, suspension (revokes tokens and sessions), verification review |
 | `Administration\SettingsSchema` / `SettingsService` | Typed, validated, cached system settings |
 

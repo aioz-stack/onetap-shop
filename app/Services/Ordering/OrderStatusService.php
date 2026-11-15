@@ -2,7 +2,9 @@
 
 namespace App\Services\Ordering;
 
+use App\Enums\AssignmentStatus;
 use App\Enums\SellerOrderStatus;
+use App\Enums\ShipmentStatus;
 use App\Models\SellerOrder;
 use App\Models\User;
 use App\Notifications\OrderStatusUpdated;
@@ -56,6 +58,10 @@ class OrderStatusService
 
             $order->save();
 
+            if ($next === SellerOrderStatus::Cancelled) {
+                $this->closeShipmentBeforePickup($order, $actor, $note);
+            }
+
             $order->statusHistories()->create([
                 'from_status' => $current->value,
                 'to_status' => $next->value,
@@ -89,6 +95,29 @@ class OrderStatusService
             ->value('from_status');
 
         return SellerOrderStatus::tryFrom((string) $previous) ?? SellerOrderStatus::Delivered;
+    }
+
+    /**
+     * A packed order cancelled before the rider collected it: the waiting shipment is closed
+     * and any rider job is cancelled so nobody is sent to pick it up.
+     */
+    private function closeShipmentBeforePickup(SellerOrder $order, ?User $actor, ?string $note): void
+    {
+        $shipment = $order->shipment()->first();
+
+        if (! $shipment || ! $shipment->status->isBeforePickup()) {
+            return;
+        }
+
+        $from = $shipment->status->value;
+        $shipment->forceFill(['status' => ShipmentStatus::ReturnedToSeller])->save();
+        $shipment->assignments()->whereIn('status', [AssignmentStatus::Assigned, AssignmentStatus::Accepted])->update(['status' => AssignmentStatus::Cancelled]);
+        $shipment->statusHistories()->create([
+            'from_status' => $from,
+            'to_status' => ShipmentStatus::ReturnedToSeller->value,
+            'note' => 'Order cancelled before pickup'.($note ? ": {$note}" : ''),
+            'user_id' => $actor?->id,
+        ]);
     }
 
     private function applyStockEffects(SellerOrder $order, SellerOrderStatus $current, SellerOrderStatus $next, ?User $actor): void

@@ -3,6 +3,7 @@
 namespace App\Services\Catalog;
 
 use App\Enums\ProductStatus;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariation;
 use App\Models\Shop;
@@ -167,7 +168,7 @@ class SellerProductService
 
         // Variations that were removed: delete if never sold, otherwise deactivate to keep order history intact.
         foreach ($product->variations()->whereNotIn('id', $keep)->get() as $removed) {
-            \App\Models\OrderItem::query()->where('product_variation_id', $removed->id)->exists() || $removed->reserved > 0
+            OrderItem::query()->where('product_variation_id', $removed->id)->exists() || $removed->reserved > 0
                 ? $removed->update(['is_active' => false])
                 : $removed->delete();
         }

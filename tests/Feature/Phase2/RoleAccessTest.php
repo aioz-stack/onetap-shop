@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\RoleName;
+use App\Models\LogisticsPartner;
+use App\Models\Shop;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,8 +23,12 @@ dataset('panels', [
 ]);
 
 test('each panel opens for its own role', function (string $path, RoleName $role, string $component) {
-    // The Seller Center also needs an approved seller profile with a shop.
-    $user = $role === RoleName::Seller ? App\Models\Shop::factory()->create()->sellerProfile->user : User::factory()->withRole($role)->create();
+    // The Seller Center needs an approved shop; the Logistics Panel needs an active partner.
+    $user = match ($role) {
+        RoleName::Seller => Shop::factory()->create()->sellerProfile->user,
+        RoleName::Logistics => LogisticsPartner::factory()->create()->owner,
+        default => User::factory()->withRole($role)->create(),
+    };
 
     $this->actingAs($user)
         ->get($path)
@@ -48,7 +54,7 @@ test('guests are sent to login from every panel', function (string $path) {
 })->with('panels');
 
 test('a user with several roles can open each of their panels', function () {
-    $user = App\Models\Shop::factory()->create()->sellerProfile->user;
+    $user = Shop::factory()->create()->sellerProfile->user;
     expect($user->roleNames())->toEqualCanonicalizing(['customer', 'seller']);
 
     $this->actingAs($user)->get('/seller')->assertOk();
@@ -60,6 +66,13 @@ test('a user with several roles can open each of their panels', function () {
 
 test('a seller role without an approved shop cannot open the seller center', function () {
     $this->actingAs(User::factory()->withRole(RoleName::Seller)->create())->get('/seller')->assertForbidden();
+});
+
+test('a logistics role without an active partner cannot open the logistics panel', function () {
+    $this->actingAs(User::factory()->withRole(RoleName::Logistics)->create())->get('/logistics')->assertForbidden();
+
+    $suspended = LogisticsPartner::factory()->create(['status' => 'suspended']);
+    $this->actingAs($suspended->owner)->get('/logistics')->assertForbidden();
 });
 
 test('permissions follow the role assignments', function () {

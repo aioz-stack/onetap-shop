@@ -116,6 +116,7 @@ class Product extends Model
     {
         return $this->hasOne(ProductImage::class)->orderByDesc('is_primary')->orderBy('sort_order');
     }
+
     /**
      * Promotions running right now, best discount first.
      *

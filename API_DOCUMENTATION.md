@@ -37,10 +37,10 @@ Active top-level categories with active `children[]`, ordered by `sort_order`.
 | GET / PUT | /customer/profile | PUT: `name, email, phone` |
 | GET / POST | /customer/addresses | POST: `recipient_name, phone (PH mobile), region, province, city, barangay, street, postal_code?, label?, is_default?` → 201 |
 | PUT / DELETE | /customer/addresses/{id} | Owner only (404 otherwise); there is always exactly one default |
-| GET | /cart | `?address_id=` for delivery quotes. Returns `{groups: [{shop, items[], subtotal, shipping{fee, covered, free}, total}], summary}` |
+| GET | /cart | `?address_id=` for delivery quotes, `?vouchers[shop_id]=CODE` to preview a voucher (per group: `voucher{code,label,discount}` or `voucher_error`). Prices include running promotions. Returns `{groups: [{shop, items[], subtotal, shipping{fee, covered, free}, total}], summary}` |
 | POST | /cart/items | `variation_id, quantity` → 201 with the cart. 422 if out of stock, unavailable, on vacation or your own shop |
 | PATCH / DELETE | /cart/items/{id} | PATCH: `quantity?`, `is_selected?` |
-| POST | /orders | `address_id, payment_method (cod), notes?` → 201 `{order_number, grand_total, shipping_total, seller_orders[]}`. Checks out the selected cart items; one seller order per shop. 422 on stock, COD limit or other method. Throttled 10/min |
+| POST | /orders | `address_id, payment_method (cod), notes?, vouchers?{shop_id: CODE}` → 201 `{order_number, grand_total, shipping_total, seller_orders[]}`. Checks out the selected cart items; one seller order per shop. 422 on stock, COD limit or other method. Throttled 10/min |
 | GET | /orders | `?tab=unpaid,to_ship,shipping,completed,cancelled,return_refund`; paginated seller orders |
 | GET | /orders/{id} | Seller order with items, address, timeline, shipment, refund, `can{cancel, confirm_received, request_refund, review}` |
 | POST | /orders/{id}/cancel | `reason`; only while Unpaid or Pending; releases stock |

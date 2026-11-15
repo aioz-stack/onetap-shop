@@ -23,6 +23,7 @@ class LogisticsPartner extends Model
         'contact_email',
         'address',
         'base_delivery_fee',
+        'rider_fee_per_delivery',
         'status',
     ];
 
@@ -33,6 +34,7 @@ class LogisticsPartner extends Model
     {
         return [
             'base_delivery_fee' => 'decimal:2',
+            'rider_fee_per_delivery' => 'decimal:2',
             'status' => PartnerStatus::class,
         ];
     }
@@ -67,5 +69,13 @@ class LogisticsPartner extends Model
     public function shipments(): HasMany
     {
         return $this->hasMany(Shipment::class);
+    }
+
+    /**
+     * @return HasMany<RiderRemittance, $this>
+     */
+    public function remittances(): HasMany
+    {
+        return $this->hasMany(RiderRemittance::class);
     }
 }

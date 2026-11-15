@@ -1,6 +1,6 @@
 # Onetap Marketplace — Development Log
 
-**Current phase:** Phase 4 (Customer Panel) is complete. Phase 5 (Seller Center) is next.
+**Current phase:** Phase 6 (Logistics Panel) is complete. Phase 7 (Rider Panel) is next.
 
 ## Setup
 
@@ -267,33 +267,174 @@ If you only need the server, run `npm run build` once and then `php artisan serv
   - All 19 storefront and account pages render and fit at 375px.
 - API checked with curl against MySQL: search, product detail (available stock reflects the open reservation), and the cart returns 401 without a token.
 
+## Phase 5 — Seller Center — done (2026-11-16)
+
+**Access**
+- `/seller/*` requires the seller role and an approved seller profile with a shop (`seller.shop` middleware). The shop is resolved on the server, so controllers never trust a shop id from the request, and every record is checked against it (404 otherwise).
+- Finance pages sit behind Laravel's `password.confirm` (the new `/confirm-password` page). The confirmation lasts 3 hours (`auth.password_timeout`).
+
+**Dashboard:** total sales (completed), orders, pending to ship, products sold, products live, balance (available plus on hold), a 30-day sales chart, the next orders to ship, and low-stock variations. Sidebar badges show orders to ship and unread chats.
+
+**Products** (`SellerProductService`)
+- Status tabs and search. Create and edit with up to 8 photos (JPG/PNG/WebP, 4 MB, 200–5000 px) on the public disk, with a cover photo and removal.
+- Up to 30 variations, each with a price, an optional original price (must be ≥ price) and stock.
+- **Review rule:** new products go to draft or "submit for review". On a live product, edits to name, description, category, brand or photos send it back to review; price, stock and variation changes stay live.
+- **Stock changes** go through `InventoryService` (`restock` and `adjust`, ledgered) and can never drop below what open orders have reserved.
+- **Removing a variation** that was ever sold (or is reserved) deactivates it instead of deleting it.
+- **Status actions:** submit (draft or rejected → review), unpublish, republish (back to live if it was approved before, otherwise to review), and delete (soft delete; past orders keep their snapshot). Products with an open violation are locked.
+- **Inventory page:** every variation with on hand, reserved and available, a low-stock filter, an "update stock" dialog with a note, and recent stock movements.
+
+**Orders** (`SellerOrderService`)
+- Tabs and search. Detail page with items to pack, totals (voucher, delivery, commission, "you earn"), address and customer note, shipment, return requests and history.
+- Accept: Pending → Processing.
+- **Ready for pickup:** Processing → Ready, and `ShipmentService` creates the shipment in the same transaction. It gets a tracking number, the pickup and drop-off addresses, the COD amount (the seller-order total) and the delivery fee. It's routed to the cheapest partner covering the customer's barangay or city; without coverage it waits for assignment, and that's noted in the shipment history.
+- Cancel (Unpaid, Pending or Processing; reason required). Stock is released and the customer is notified.
+
+**Shop settings**
+- Profile: description, category, pickup address and phone.
+- Branding: logo (≥100 px) and banner (≥800×200) uploads.
+- Decoration: template (classic, spotlight or minimal), accent color, and an announcement bar. These now drive the public shop page.
+- Vacation mode with a message. It blocks add-to-cart and checkout, and turns on the away auto-reply.
+
+**Customer service**
+- Shop chat inbox: replies, unread markers, 5-second polling.
+- **Automated replies:** one greeting (first message), one away message (sent while on vacation), and any number of keyword replies (case-insensitive "contains").
+- **Reviews:** filter by star rating or "not replied yet", and reply; replies are public on the product page.
+
+**Finance** (password-confirmed)
+- **Balance:** available, on hold, income this month and last month, and earnings still in progress.
+- **Withdrawals:** requested through `WithdrawalService`, so the minimum and balance checks apply and the amount is held.
+- **Payout accounts:** up to 5 banks or e-wallets. The number is stored with an encrypted cast and only the last 4 digits are shown. Accounts with payout history can't be deleted.
+- **Income statement:** monthly, with gross sales, vouchers, commission, net income and refunds, plus per-order income details showing available or on hold.
+- **Transaction history.**
+
+**Marketing**
+- **Vouchers:** shop codes (unique, alphanumeric, stored uppercase).
+  - Types: fixed, percent with an optional cap, or free shipping with an optional cap.
+  - Rules: minimum spend, total and per-customer limits, a schedule, an on/off switch.
+  - Each voucher shows how many times it was used and the discount given. A voucher that was used is switched off instead of deleted.
+- **Promotions:** a percent markdown on chosen products for a period. `PricingService` applies the best running promotion everywhere a price appears: product cards (with a "−20%" badge), the product page (struck-through price and promo name), the cart, checkout and the API.
+- **Referrals:** the owner's personal code and link (`/register?ref=CODE` now prefills the sign-up form) and the list of customers who joined with it.
+
+**Checkout changes** (`CheckoutService`, `CartService`, `VoucherService`)
+- Unit prices include promotions. Customers can enter one shop voucher per shop at checkout; it's validated live and the error is shown under that shop.
+- **Commission** is charged on (items − item discount); free-shipping vouchers don't reduce it.
+- **Seller earning** = items − commission − voucher discount. The shop funds its own vouchers, and the logistics fee is untouched.
+- **Redemption** is recorded, and `used_count` is incremented under a row lock inside the checkout transaction.
+- **New migration** `seller_orders.voucher_id`, already applied to MySQL. The web and API checkout both accept `vouchers[shop_id]=CODE`.
+
+## Phase 5 testing results (2026-11-16)
+
+- `php artisan test`: **213 passed, 2106 assertions** (43 new, plus 1 new Phase 2 test that a seller role without an approved shop gets a 403). They cover:
+  - every seller page rendering;
+  - product creation with photos, variations and the stock ledger, draft vs submit, validation of photos, prices and duplicate variations, the live-edit review rule, the reserved-stock floor, deactivating sold variations, the status workflow and soft delete, the violation lock, and cross-shop 404s;
+  - accept → ready creating a routed COD shipment and notifying the customer, unassigned shipments, cancel rules and stock release, order isolation, dashboard figures;
+  - the finance password gate, encrypted bank numbers (the raw column is ciphertext), withdrawal limits and holds, statement and transactions, account-removal guards;
+  - voucher creation and uniqueness, promotion pricing across product, search, cart and checkout, cross-shop and expired promotions, fixed, percent-with-cap and free-shipping voucher math including commission and seller earning, voucher rules (minimum spend, other shop, scheduled, exhausted, unknown, reused), and API vouchers;
+  - keyword and away auto-replies, the seller inbox and its isolation, review replies, shop profile, branding, template and vacation (which blocks the cart), and referral sign-up tracking.
+- Browser check on MySQL as the demo seller (Santos Home Bakery):
+  - The dashboard showed the pending bakery order with badges (orders to ship 1, chat 2).
+  - Accepted and then marked `OT261115I73DWN-1` ready: tracking `OTX261115E9ALWC4` was created, routed to Onetap Express, with ₱419 COD and the earning shown as ₱342 after ₱18 commission.
+  - Created "Cheese Pandesal (10 pcs)" through the form with a real PNG upload (generated in the page); it went to Under Review, with the file on disk and a restock ledger row in MySQL.
+  - Created the "Ube Week" 20% promotion on Ube Ensaymada; the storefront API then showed ₱52 (was ₱65) and ₱288 (was ₱360).
+  - Created voucher `BAKERY30` (₱30 off, ₱200 minimum).
+  - Finance redirected to `/confirm-password`, and after confirming showed ₱342 in progress with withdrawal disabled (no available balance yet).
+  - Replied to the customer from the seller chat inbox; the unread badge cleared.
+  - All 18 seller pages and the public shop page render and fit at 375px.
+  - I did not type a bank account number in the browser (the automated tests cover payout accounts).
+
+## Phase 6 — Logistics Panel — done (2026-11-16)
+
+**Access:** `/logistics/*` requires the logistics role and the operator account of an **active** partner (`logistics.partner` middleware). The partner is resolved on the server, and every shipment, rider, area and remittance is checked against it (404 otherwise).
+
+**Shipment status service** (`ShipmentStatusService`, the delivery-flow counterpart of `OrderStatusService`)
+- **Transition map** in `ShipmentStatus::allowedTransitions()`:
+  - Pending pickup → Assigned → Accepted → Arrived at pickup → Picked up → In transit → Out for delivery → Delivered.
+  - Out for delivery → Failed delivery or Customer unavailable → Rescheduled (→ Out for delivery again) or Returned to seller.
+  - Assigned, Accepted or Arrived can go back to Pending pickup (unassign or reassign).
+- **On every change** it writes history (with optional GPS), counts failed attempts, stamps picked-up and delivered times, closes or cancels rider jobs, and audits.
+- **Seller-order sync:**
+  - Picked up → Shipping (the reservation becomes a sale).
+  - Delivered → Delivered (the customer can now confirm received).
+  - Returned to seller → Returned (items restocked).
+- **Cancelled before pickup:** if a packed order is cancelled, `OrderStatusService` closes the waiting shipment and cancels its rider job.
+
+**Dispatch** (`DispatchService`)
+- Assign or reassign to an **active rider of the same partner**. Reassigning cancels the previous job.
+- A rescheduled parcel gets a "delivery" job, with no new pickup.
+- The rider is notified (`DeliveryAssigned`, in the database). The rider picker lists online riders with the fewest open jobs first.
+- Unassign before pickup, with a reason.
+- **Admin:** "Route to partner" for shipments no partner covers. There's a banner and a "No partner yet" filter on Admin → Shipments; rerouting is only allowed before a rider has the job.
+
+**Logistics Panel**
+- **Dashboard:** total shipments, pending pickups (and how many have no rider), in transit, out for delivery, delivered (and today), failed, active riders, pending approvals, COD collected today and still with riders, remittances to review, and a "waiting for a rider" list.
+- **Shipments:**
+  - Tabs: pickup requests, assigned, in transit, out for delivery, delivered, failed, returned. Search, plus a filter by rider.
+  - Detail page: pick-up and drop-off, the parcel, COD and fee, proof of delivery and COD status, rider jobs, tracking history.
+  - Actions: assign or reassign, remove rider, reschedule (with a note and optional date), return to seller.
+- **Riders** (`RiderService`):
+  - Add a rider (creates a rider login under the partner; pending unless "documents checked — activate now"), edit, approve, suspend (goes offline, and uncollected pickups go back to the queue), reactivate.
+  - List: availability, open jobs, completed jobs, cash on hand.
+  - Rider page: delivered count, failed attempts, success rate, average pickup-to-delivery time, cash collected and unremitted, recent jobs.
+- **Service coverage:** the partner manages its own areas and fees, through the shared `CoverageService`. Admin coverage now uses it too, and duplicate detection is case-insensitive.
+- **Finance:**
+  - Daily COD per day (pick a date): totals, a per-rider breakdown with outstanding cash, and each collection (mismatches highlighted).
+  - Rider remittances (`RemittanceService`): the rider submits all unremitted collections up to that day (`submit()`; the Rider app calls it in Phase 7). The operator counts the cash: a match confirms it, marks the collections remitted and writes a `remittance` ledger entry; a mismatch saves it as disputed (collections flagged) and it can be recounted.
+  - Earnings and reports: delivery fees on delivered parcels (all time, this month, still in progress) and a 12-month report (delivered, fees, COD, failed attempts, returned) with CSV download.
+- **Sidebar badges:** shipments waiting for a rider, riders waiting for approval, remittances to review.
+
+## Phase 6 testing results (2026-11-16)
+
+- `php artisan test`: **241 passed, 2355 assertions** (26 new, plus 1 new Phase 2 test for a logistics role without an active partner, and a fix for a flaky user-search test that matched Faker names). They cover:
+  - every logistics page rendering;
+  - assignment with notification, reassignment cancelling the old job, same-partner/active-only riders, partner isolation;
+  - pickup turning the reservation into a sale and setting the order to Shipping, delivery setting it to Delivered, skipped steps rejected;
+  - customer-unavailable → reschedule (with date) → redelivery job → failed → return to seller (order Returned, stock restored, jobs closed);
+  - unassign; a packed order cancelled before pickup closing its shipment and job; admin routing an uncovered shipment;
+  - adding a rider who can log in to `/rider` after approval, editing riders and isolation, suspension requeuing pickups, rider performance;
+  - coverage CRUD with case-insensitive duplicates and isolation;
+  - remittance submit and confirm writing the ledger, a short count saved as disputed and then a recount;
+  - daily COD, earnings and CSV, dashboard figures.
+- Browser check on MySQL as the demo operator (Onetap Express):
+  - The dashboard showed the bakery shipment `OTX261115E9ALWC4` waiting, with a sidebar badge of 1.
+  - Assigned it to Pedro Reyes from the shipment page: the status became Assigned, a pickup job was created, and the tracking history was written.
+  - MySQL has the rider's notification ("Pick up OTX261115E9ALWC4 at Santos Home Bakery. Collect ₱419.00 on delivery."). The seller order correctly stays Ready for pickup until the rider collects it.
+  - All 12 logistics pages render and fit at 375px with no client errors.
+  - I didn't add a rider in the browser, to avoid more test logins in your database; the automated tests cover it.
+
 ## Known issues / notes
 
 - The migrations reached MySQL before the explicit `php artisan migrate` step: that step reported "Nothing to migrate" (all 15 already in batch 1). Nothing was dropped and the database was empty beforehand.
 - **Staff accounts (admin, logistics, rider) cannot shop.** The cart, checkout and My Account require the customer role; sellers have it. Staff see an explanation on product pages.
-- Vouchers and promotions are not applied at checkout yet (`discount` is always 0). Sellers create them in Phase 5.
+- Platform-wide (admin) vouchers are supported by the data model (`shop_id` null) but there is no admin screen for them yet.
+- Search sorting by price uses list prices; promotion prices are applied to what's displayed and charged, not to the sort order.
+- Seller shop names can't be changed by the seller (contact support); admin editing of shop names isn't built yet.
 - Refund requests are text-only; photo evidence is not collected yet.
-- Chat uses 5-second polling, not websockets. The seller's side of chat is Phase 5.
-- Orders can only reach "Delivered", and so be confirmed as received, once the logistics and rider flows exist (Phases 6–7). Until then, those paths are covered by tests with factory data.
-- Product images on real shops come from seller uploads in Phase 5; the demo uses generated SVGs.
+- Chat uses 5-second polling, not websockets.
+- Riders move parcels through the delivery flow from the Rider app in Phase 7. Until then, statuses after "Assigned" only change in tests, or through the logistics actions (reschedule, return).
+- Suspending a rider does not take back parcels they have already picked up; the operator handles those manually.
+- Each logistics partner has a single operator account; there are no sub-users or dispatcher roles yet.
 - Storefront product images use `loading="lazy"`, so a browser tab that isn't on screen doesn't draw them (that's why the hidden test pane showed 0 loaded). This is expected behavior.
 - **The `general.timezone` setting is stored but not applied.** The app clock is still `config('app.timezone')` = UTC (for example, CSV file names use UTC). Switching the app timezone changes how existing timestamps are read, so it needs a deliberate decision.
 - Notification settings (admin email and event toggles) are stored, but no emails are sent until notifications are built in Phase 8.
 - The branding color setting is for emails and the future mobile apps; the web theme uses the built-in palette.
 - Shipments, COD collections, remittances, refund requests, withdrawal requests and verification uploads are created by later phases (4–7). Their admin screens are built and tested with factory data, but they are empty on the real database until then.
-- Sidebar entries marked "Soon" in the seller and logistics panels are placeholders for Phases 5–6.
+- The rider app's tabs (Deliveries, COD, Profile) are placeholders until Phase 7.
 - Demo passwords are weak by design and the seeder is limited to local and testing environments.
 - Dev database leftovers from the browser checks:
   - `qa_customer` (Phase 2).
-  - Order `OT261115I73DWN`: the bakery seller order is pending, which is useful for the Phase 5 seller flow; the hardware order is cancelled.
-  - A chat thread with Santos Home Bakery that has my test message twice (the first send went through before the crash fix).
+  - Order `OT261115I73DWN`: the bakery seller order is Ready for pickup, and shipment `OTX261115E9ALWC4` is assigned to rider Pedro Reyes, ready for the Phase 7 rider flow; the hardware order is cancelled.
+  - A chat thread with Santos Home Bakery (my test message twice, the greeting, and the seller's reply).
+  - "Cheese Pandesal (10 pcs)", under review, from the upload test.
+  - The "Ube Week" promotion (20% off Ube Ensaymada, no end date) and the `BAKERY30` voucher.
 
-## Next tasks (Phase 5: Seller Center)
+## Next tasks (Phase 7: Rider Panel)
 
-- Dashboard with sales analytics.
-- Products: create and edit with image uploads, variations and inventory (through `InventoryService`), the status tabs, and submitting for review.
-- Orders: tabs, plus process → ready for pickup (creates the shipment) and cancel, all through `OrderStatusService`.
-- Shop profile: logo, banner, decoration and templates, vacation mode.
-- Customer service: chat inbox, greetings and auto-replies, review replies.
-- Finance (password-confirmed): balance, income statement, bank accounts, withdrawal requests through `WithdrawalService`.
-- Marketing: vouchers, discounts and promotions. Applying vouchers at checkout comes with it.
+- Mobile-first rider app:
+  - Dashboard: today's deliveries, assigned orders, completed, pending pickups, COD collection, daily earnings.
+  - Shift sign in and out; available or unavailable.
+- Delivery flow through `ShipmentStatusService`: accept/decline, arrived at pickup, picked up, in transit, out for delivery, delivered, plus failed delivery, customer unavailable, reschedule request and return to seller.
+- Proof of delivery: photo capture or upload (private disk), recipient name and relationship, timestamp, GPS with permission.
+- COD: record the collection (`rider_collections`; the payment becomes paid when the amount matches), daily totals, submit the remittance through `RemittanceService::submit`, remittance history, and discrepancies.
+- Strict isolation: a rider only sees and acts on their own assignments.
+- Rider API endpoints: `/api/v1/rider/assignments`, `/rider/deliveries/{id}/status`, `/rider/deliveries/{id}/proof`.

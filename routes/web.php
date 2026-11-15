@@ -141,6 +141,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('riders/{rider}/activate', [Admin\Riders::class, 'activate'])->name('riders.activate');
 
             Route::get('shipments', [Admin\Shipments::class, 'index'])->name('shipments.index');
+            Route::post('shipments/{shipment}/route', [Admin\Shipments::class, 'route'])->name('shipments.route');
             Route::get('cod', [Admin\Cod::class, 'index'])->name('cod.index');
         });
 
@@ -229,8 +230,35 @@ Route::middleware(['auth', 'active'])->group(function () {
         });
     });
 
-    Route::prefix('logistics')->name('logistics.')->middleware('role:logistics')->group(function () {
+    Route::prefix('logistics')->name('logistics.')->middleware(['role:logistics', 'logistics.partner'])->group(function () {
         Route::get('/', [Logistics\Dashboard::class, 'index'])->name('dashboard');
+
+        Route::get('shipments', [Logistics\Shipments::class, 'index'])->name('shipments.index');
+        Route::get('shipments/{shipment}', [Logistics\Shipments::class, 'show'])->name('shipments.show');
+        Route::post('shipments/{shipment}/assign', [Logistics\Shipments::class, 'assign'])->name('shipments.assign');
+        Route::post('shipments/{shipment}/unassign', [Logistics\Shipments::class, 'unassign'])->name('shipments.unassign');
+        Route::post('shipments/{shipment}/reschedule', [Logistics\Shipments::class, 'reschedule'])->name('shipments.reschedule');
+        Route::post('shipments/{shipment}/return', [Logistics\Shipments::class, 'returnToSeller'])->name('shipments.return');
+
+        Route::get('riders', [Logistics\Riders::class, 'index'])->name('riders.index');
+        Route::get('riders/create', [Logistics\Riders::class, 'create'])->name('riders.create');
+        Route::post('riders', [Logistics\Riders::class, 'store'])->name('riders.store');
+        Route::get('riders/{rider}', [Logistics\Riders::class, 'show'])->name('riders.show');
+        Route::get('riders/{rider}/edit', [Logistics\Riders::class, 'edit'])->name('riders.edit');
+        Route::put('riders/{rider}', [Logistics\Riders::class, 'update'])->name('riders.update');
+        Route::post('riders/{rider}/approve', [Logistics\Riders::class, 'approve'])->name('riders.approve');
+        Route::post('riders/{rider}/suspend', [Logistics\Riders::class, 'suspend'])->name('riders.suspend');
+
+        Route::get('coverage', [Logistics\Operations::class, 'coverage'])->name('coverage');
+        Route::post('coverage', [Logistics\Operations::class, 'storeArea'])->name('coverage.store');
+        Route::put('coverage/{area}', [Logistics\Operations::class, 'updateArea'])->name('coverage.update');
+        Route::delete('coverage/{area}', [Logistics\Operations::class, 'destroyArea'])->name('coverage.destroy');
+
+        Route::get('cod', [Logistics\Operations::class, 'cod'])->name('cod');
+        Route::get('remittances', [Logistics\Operations::class, 'remittances'])->name('remittances');
+        Route::post('remittances/{remittance}/confirm', [Logistics\Operations::class, 'confirmRemittance'])->name('remittances.confirm');
+        Route::get('earnings', [Logistics\Operations::class, 'earnings'])->name('earnings');
+        Route::get('earnings/export', [Logistics\Operations::class, 'exportEarnings'])->name('earnings.export');
     });
 
     Route::prefix('rider')->name('rider.')->middleware('role:rider')->group(function () {

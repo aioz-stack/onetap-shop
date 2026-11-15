@@ -8,7 +8,7 @@ use App\Enums\RiderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\LogisticsPartner;
 use App\Models\RiderProfile;
-use App\Services\Logistics\LogisticsPartnerService;
+use App\Services\Logistics\RiderService;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +17,7 @@ use Inertia\Response;
 
 class Riders extends Controller
 {
-    public function __construct(private LogisticsPartnerService $partners) {}
+    public function __construct(private RiderService $riders) {}
 
     public function index(Request $request): Response
     {
@@ -71,14 +71,14 @@ class Riders extends Controller
 
     public function suspend(Request $request, RiderProfile $rider): RedirectResponse
     {
-        $this->partners->setRiderStatus($rider, RiderStatus::Suspended, $request->user());
+        $this->riders->setStatus($rider, RiderStatus::Suspended, $request->user());
 
         return back()->with('success', 'Rider suspended and set offline.');
     }
 
     public function activate(Request $request, RiderProfile $rider): RedirectResponse
     {
-        $this->partners->setRiderStatus($rider, RiderStatus::Active, $request->user());
+        $this->riders->setStatus($rider, RiderStatus::Active, $request->user());
 
         return back()->with('success', 'Rider activated.');
     }

@@ -2,6 +2,48 @@
 
 ## [Unreleased]
 
+### 2026-11-16 — Phase 6 (Logistics Panel)
+
+**Added**
+- **`ShipmentStatusService`:** the full delivery flow, with seller-order sync (picked up → Shipping, delivered → Delivered, returned → Returned), history with GPS, attempt counting and closing rider jobs.
+- **`DispatchService`:** assign, reassign and unassign riders, redelivery jobs, and admin routing of uncovered shipments. Riders get a `DeliveryAssigned` notification.
+- **`RemittanceService`:** rider remittance submission, and confirmation (ledger entry) or dispute on mismatch.
+- **`RiderService`:** create, update, approve and suspend riders (suspension requeues uncollected pickups), plus rider performance.
+- **`CoverageService`:** shared by the admin and logistics screens, with case-insensitive duplicates.
+- **Logistics Panel:** dashboard, shipments (tabs, detail, assign, reschedule, return), riders (list, add, edit, approve, suspend, performance), coverage, daily COD, remittances (count and confirm), earnings with a 12-month report and CSV.
+- **Admin:** "Route to partner" on shipment monitoring, with a "No partner yet" filter and banner.
+- `logistics.partner` middleware and sidebar badges.
+- 26 feature tests (241 total).
+
+**Changed**
+- Cancelling a packed order closes its waiting shipment and rider job.
+- Admin rider suspension now uses `RiderService`, so it also requeues pickups.
+- `ShipmentStatus` gained a transition map and tab groups.
+
+**Fixed**
+- A flaky admin user-search test (a Faker name could contain the search term).
+
+### 2026-11-16 — Phase 5 (Seller Center)
+
+**Added**
+- **Seller Center:**
+  - Dashboard with a 30-day sales chart, orders to ship and low stock.
+  - Products with photo uploads, variations, the review workflow and an inventory page.
+  - Orders: accept, ready for pickup (creates a routed COD shipment) and cancel.
+  - Shop settings (profile, logo and banner, template, accent color, announcement, vacation mode), chat inbox, automated replies (greeting, away, keyword) and review replies.
+  - Password-confirmed finance: balance, withdrawals, encrypted payout accounts, income statement, transactions.
+  - Marketing: vouchers, promotions, referrals.
+- **Services:** `SellerProductService`, `SellerOrderService`, `ShipmentService`, `PricingService`, `VoucherService`.
+- **Middleware:** `seller.shop`, plus the `/confirm-password` page for `password.confirm`.
+- **Storefront, cart, checkout and API now apply promotions and per-shop vouchers.** Commission is charged on the discounted items; the shop funds its own vouchers.
+- **Migration:** `seller_orders.voucher_id`.
+- **Shop pages** use the seller's template, accent color and announcement. `/register?ref=CODE` prefills the referral code.
+- 43 feature tests (213 total).
+
+**Changed**
+- Seller role tests now require an approved shop.
+- The `NewSellerOrder` notification links to the seller's order page.
+
 ### 2026-11-16 — Phase 4 (Customer Panel)
 
 **Added**

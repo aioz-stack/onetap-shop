@@ -22,7 +22,7 @@ beforeEach(function () {
 test('users can be filtered by role, status and search', function () {
     User::factory()->customer()->create(['name' => 'Ana Customer']);
     User::factory()->customer()->suspended()->create(['name' => 'Ben Suspended']);
-    User::factory()->withRole(RoleName::Rider)->create(['name' => 'Carlo Rider']);
+    User::factory()->withRole(RoleName::Rider)->create(['name' => 'Qzxcarlo Rider']);
 
     $this->actingAs($this->admin)->get('/admin/users?role=customer')
         ->assertInertia(fn (Assert $page) => $page->has('users.data', 2)->where('roleCounts.customer', 2)->where('roleCounts.rider', 1));
@@ -30,7 +30,7 @@ test('users can be filtered by role, status and search', function () {
     $this->actingAs($this->admin)->get('/admin/users?role=customer&status=suspended')
         ->assertInertia(fn (Assert $page) => $page->has('users.data', 1)->where('users.data.0.name', 'Ben Suspended'));
 
-    $this->actingAs($this->admin)->get('/admin/users?search=carlo')
+    $this->actingAs($this->admin)->get('/admin/users?search=qzxcarlo')
         ->assertInertia(fn (Assert $page) => $page->has('users.data', 1)->where('users.data.0.roles', ['rider']));
 });
 

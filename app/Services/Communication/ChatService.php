@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Shop;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -113,9 +114,9 @@ class ChatService
     /**
      * Conversations for a shop inbox, newest first, with the latest message.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, Conversation>
+     * @return Collection<int, Conversation>
      */
-    public function shopInbox(\App\Models\Shop $shop)
+    public function shopInbox(Shop $shop)
     {
         return Conversation::query()
             ->where('shop_id', $shop->id)

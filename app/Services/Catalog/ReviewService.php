@@ -64,6 +64,7 @@ class ReviewService
 
         Shop::query()->whereKey($product->shop_id)->update(['rating_avg' => round((float) $shopAverage, 2)]);
     }
+
     public function reply(ProductReview $review, Shop $shop, string $reply): ProductReview
     {
         abort_unless($review->product()->withTrashed()->value('shop_id') === $shop->id, 404);

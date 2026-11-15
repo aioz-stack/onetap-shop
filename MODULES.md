@@ -16,22 +16,22 @@ Legend: ⬜ not started · 🟨 in progress · ✅ implemented **and tested**
 | Customer — Storefront | Home (banners, categories, featured, recommended, shops, best sellers, new), search, listing, product detail | 4 | ✅ |
 | Customer — Cart & Checkout | Seller-grouped cart, select items, shipping fee, COD checkout | 4 | ✅ |
 | Customer — Account | Profile + photo, addresses, purchases, tracking, reviews, refunds, cancellations, notifications, chat, security, verification | 4 | ✅ |
-| Seller — Dashboard | Sales, orders, balance, analytics | 5 | ⬜ |
-| Seller — Products | Status tabs, add/edit/delete, variations, inventory | 5 | ⬜ |
-| Seller — Orders | Status tabs, process, ready for pickup, cancel, returns | 5 | ⬜ |
-| Seller — Shop | Profile, logo, banner, description, decoration, templates, settings, vacation mode | 5 | ⬜ |
-| Seller — Customer Service | Chat, greetings, auto-replies, inquiries, review replies | 5 | ⬜ |
-| Seller — Finance | Balance, income overview/statement/details, bank accounts, withdrawals, history (password-confirmed) | 5 | ⬜ |
-| Seller — Marketing | Discounts, vouchers, promotions, referrals | 5 | ⬜ |
-| Logistics — Dashboard | Shipment counts by status, active riders, COD collections | 6 | ⬜ |
-| Logistics — Riders | Add/edit/approve/suspend, info, performance, availability | 6 | ⬜ |
-| Logistics — Shipments | Incoming, pickup requests, assign, track all statuses, returns | 6 | ⬜ |
-| Logistics — Coverage | Barangay/city service areas, fees | 6 | ⬜ |
-| Logistics — Finance | Daily COD, rider remittances, delivery fees, earnings, reports | 6 | ⬜ |
+| Seller — Dashboard | Sales, orders, balance, analytics | 5 | ✅ |
+| Seller — Products | Status tabs, add/edit/delete, variations, inventory | 5 | ✅ |
+| Seller — Orders | Status tabs, process, ready for pickup, cancel, returns | 5 | ✅ |
+| Seller — Shop | Profile, logo, banner, description, decoration, templates, settings, vacation mode | 5 | ✅ |
+| Seller — Customer Service | Chat, greetings, auto-replies, inquiries, review replies | 5 | ✅ |
+| Seller — Finance | Balance, income overview/statement/details, bank accounts, withdrawals, history (password-confirmed) | 5 | ✅ |
+| Seller — Marketing | Discounts, vouchers, promotions, referrals | 5 | ✅ |
+| Logistics — Dashboard | Shipment counts by status, active riders, COD collections | 6 | ✅ |
+| Logistics — Riders | Add/edit/approve/suspend, info, performance, availability | 6 | ✅ |
+| Logistics — Shipments | Incoming, pickup requests, assign, track all statuses, returns | 6 | ✅ |
+| Logistics — Coverage | Barangay/city service areas, fees | 6 | ✅ |
+| Logistics — Finance | Daily COD, rider remittances, delivery fees, earnings, reports | 6 | ✅ |
 | Rider — Dashboard | Today's deliveries, assigned, completed, pickups, COD, earnings | 7 | ⬜ |
 | Rider — Availability | Sign in/out, available/unavailable | 7 | ⬜ |
 | Rider — Deliveries | Full status flow + failure statuses | 7 | ⬜ |
 | Rider — Proof of Delivery | Photo capture/upload, recipient, timestamp, GPS | 7 | ⬜ |
 | Rider — COD | Collection, daily remittance, history, discrepancies | 7 | ⬜ |
-| API v1 | Endpoints in API_DOCUMENTATION.md (auth, catalog, customer shopping done) | 2–8 | 🟨 |
+| API v1 | Endpoints in API_DOCUMENTATION.md (auth, catalog, customer shopping incl. vouchers done) | 2–8 | 🟨 |
 | End-to-end workflow | Order → seller → logistics → rider → delivered → COD → finance | 8–9 | ⬜ |

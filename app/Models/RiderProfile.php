@@ -82,4 +82,12 @@ class RiderProfile extends Model
     {
         return $this->hasMany(RiderRemittance::class);
     }
+
+    /**
+     * @return HasMany<RiderShift, $this>
+     */
+    public function shifts(): HasMany
+    {
+        return $this->hasMany(RiderShift::class);
+    }
 }

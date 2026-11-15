@@ -11,7 +11,9 @@ use App\Enums\WithdrawalStatus;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\Refund;
+use App\Models\SellerOrder;
 use App\Models\SellerProfile;
+use App\Models\Shipment;
 use App\Models\VerificationDocument;
 use App\Models\Withdrawal;
 use App\Services\Administration\SettingsService;
@@ -77,9 +79,15 @@ class HandleInertiaRequests extends Middleware
                 'notifications' => $user->unreadNotifications()->count(),
                 'messages' => app(ChatService::class)->unreadCount($user),
             ] : null,
+            // Logistics Panel sidebar badges.
+            'logisticsCounts' => fn () => $user && $request->is('logistics*') && ($partner = $user->logisticsPartner()->first()) ? [
+                'unassigned' => Shipment::query()->where('logistics_partner_id', $partner->id)->where('status', 'pending_pickup')->count(),
+                'pendingRiders' => $partner->riders()->where('status', 'pending')->count(),
+                'remittances' => $partner->remittances()->where('status', 'submitted')->count(),
+            ] : null,
             // Seller Center sidebar badges.
             'sellerCounts' => fn () => $user && $request->is('seller*') && ($shopId = $user->sellerProfile?->shop?->id) ? [
-                'toShip' => \App\Models\SellerOrder::query()->where('shop_id', $shopId)->whereIn('status', ['pending', 'processing'])->count(),
+                'toShip' => SellerOrder::query()->where('shop_id', $shopId)->whereIn('status', ['pending', 'processing'])->count(),
                 'messages' => app(ChatService::class)->unreadCount($user),
             ] : null,
             // Work queues shown as sidebar badges. Only computed for admins on admin pages.

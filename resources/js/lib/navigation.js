@@ -99,16 +99,17 @@ export const logisticsNav = [
   {
     heading: 'Operations',
     items: [
-      { label: 'Shipments', icon: 'truck' },
-      { label: 'Riders', icon: 'bike' },
-      { label: 'Service Coverage', icon: 'map' },
+      { label: 'Shipments', href: '/logistics/shipments', icon: 'truck', badge: 'unassigned' },
+      { label: 'Riders', href: '/logistics/riders', icon: 'bike', badge: 'pendingRiders' },
+      { label: 'Service Coverage', href: '/logistics/coverage', icon: 'map' },
     ],
   },
   {
     heading: 'Money',
     items: [
-      { label: 'COD & Remittances', icon: 'cash' },
-      { label: 'Reports', icon: 'chart' },
+      { label: 'Daily COD', href: '/logistics/cod', icon: 'cash' },
+      { label: 'Rider Remittances', href: '/logistics/remittances', icon: 'wallet', badge: 'remittances' },
+      { label: 'Earnings & Reports', href: '/logistics/earnings', icon: 'chart' },
     ],
   },
 ];

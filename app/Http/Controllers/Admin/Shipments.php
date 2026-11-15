@@ -6,6 +6,8 @@ use App\Enums\ShipmentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\LogisticsPartner;
 use App\Models\Shipment;
+use App\Services\Logistics\DispatchService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -34,6 +36,7 @@ class Shipments extends Controller
         $tabs = self::tabs();
         $tab = array_key_exists((string) $request->query('tab'), $tabs) ? $request->query('tab') : 'pickup';
         $partnerId = $request->integer('partner') ?: null;
+        $unassigned = $request->boolean('unassigned');
         $search = trim((string) $request->query('search'));
 
         $counts = [];
@@ -47,6 +50,7 @@ class Shipments extends Controller
                 ->with(['sellerOrder:id,reference,shop_id', 'sellerOrder.shop:id,name', 'logisticsPartner:id,name', 'assignments' => fn ($query) => $query->latest('id'), 'assignments.rider.user:id,name'])
                 ->whereIn('status', $tabs[$tab]['statuses'])
                 ->when($partnerId, fn ($query) => $query->where('logistics_partner_id', $partnerId))
+                ->when($unassigned, fn ($query) => $query->whereNull('logistics_partner_id'))
                 ->when($search !== '', fn ($query) => $query->where(fn ($inner) => $inner
                     ->where('tracking_number', 'like', "%{$search}%")
                     ->orWhereHas('sellerOrder', fn ($orders) => $orders->where('reference', 'like', "%{$search}%"))))
@@ -60,6 +64,7 @@ class Shipments extends Controller
                     'order' => $shipment->sellerOrder?->only(['id', 'reference']),
                     'shop' => $shipment->sellerOrder?->shop?->name,
                     'partner' => $shipment->logisticsPartner?->name,
+                    'can_route' => $shipment->status->isBeforePickup() && ! $shipment->assignments->contains(fn ($assignment) => in_array($assignment->status->value, ['assigned', 'accepted'], true)),
                     'rider' => $shipment->assignments->first()?->rider?->user?->name,
                     'dropoff' => collect([$shipment->dropoff_address['barangay'] ?? null, $shipment->dropoff_address['city'] ?? null])->filter()->implode(', '),
                     'cod_amount' => $shipment->cod_amount,
@@ -68,9 +73,22 @@ class Shipments extends Controller
                     'updated_at' => $shipment->updated_at?->toIso8601String(),
                 ]),
             'tabs' => collect($tabs)->map(fn ($definition, $key) => ['key' => $key, 'label' => $definition['label']])->values(),
-            'filters' => ['tab' => $tab, 'partner' => $partnerId, 'search' => $search],
+            'filters' => ['tab' => $tab, 'partner' => $partnerId, 'search' => $search, 'unassigned' => $unassigned],
+            'unassignedCount' => Shipment::query()->whereNull('logistics_partner_id')->whereIn('status', [ShipmentStatus::PendingPickup])->count(),
             'counts' => $counts,
             'partners' => LogisticsPartner::query()->orderBy('name')->get(['id', 'name']),
         ]);
+    }
+
+    /**
+     * Route a shipment (typically one with no covering partner) to a logistics partner.
+     */
+    public function route(Request $request, Shipment $shipment): RedirectResponse
+    {
+        $validated = $request->validate(['partner_id' => ['required', 'exists:logistics_partners,id']]);
+        $partner = LogisticsPartner::query()->findOrFail($validated['partner_id']);
+        app(DispatchService::class)->routeToPartner($shipment, $partner, $request->user());
+
+        return back()->with('success', "{$shipment->tracking_number} routed to {$partner->name}.");
     }
 }
