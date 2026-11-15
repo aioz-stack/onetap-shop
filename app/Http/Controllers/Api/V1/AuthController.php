@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
+use App\Models\User;
 use App\Services\Administration\AuditLogger;
+use App\Services\Administration\SettingsService;
 use App\Services\Identity\LoginService;
 use App\Services\Identity\RegistrationService;
 use Illuminate\Http\JsonResponse;
@@ -17,12 +19,13 @@ class AuthController extends Controller
         private LoginService $loginService,
         private RegistrationService $registrationService,
         private AuditLogger $auditLogger,
+        private SettingsService $settings,
     ) {}
 
     public function register(RegisterRequest $request): JsonResponse
     {
         $user = $this->registrationService->registerCustomer($request->validated());
-        $token = $user->createToken($request->input('device_name', 'api'))->plainTextToken;
+        $token = $this->issueToken($user, $request->input('device_name', 'api'));
 
         return response()->json([
             'data' => new UserResource($user->load('roles')),
@@ -44,7 +47,7 @@ class AuthController extends Controller
 
         return response()->json([
             'data' => new UserResource($user->load('roles')),
-            'token' => $user->createToken($validated['device_name'] ?? 'api')->plainTextToken,
+            'token' => $this->issueToken($user, $validated['device_name'] ?? 'api'),
             'token_type' => 'Bearer',
         ]);
     }
@@ -55,6 +58,16 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out.']);
+    }
+
+    /**
+     * Issue a Sanctum token whose lifetime follows Admin → Settings → API.
+     */
+    private function issueToken(User $user, string $deviceName): string
+    {
+        $days = (int) $this->settings->get('api', 'token_expiry_days', 30);
+
+        return $user->createToken($deviceName, ['*'], $days > 0 ? now()->addDays($days) : null)->plainTextToken;
     }
 
     public function me(Request $request): UserResource

@@ -11,7 +11,7 @@ export default function UserForm({ user, mode = 'create' }) {
     name: user?.name ?? '',
     username: user?.username ?? '',
     email: user?.email ?? '',
-    role: user?.role ?? 'user',
+    role: user?.role ?? 'customer',
     password: '',
     profile_picture: null,
   });
@@ -87,14 +87,19 @@ export default function UserForm({ user, mode = 'create' }) {
           <label htmlFor="role" className={labelClass}>
             Role
           </label>
-          <input
+          <select
             id="role"
             name="role"
-            type="text"
             value={data.role}
             onChange={(event) => setData('role', event.target.value)}
             className={inputClass}
-          />
+          >
+            {['customer', 'seller', 'logistics', 'rider', 'admin'].map((role) => (
+              <option key={role} value={role}>
+                {role.charAt(0).toUpperCase() + role.slice(1)}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="md:col-span-2">

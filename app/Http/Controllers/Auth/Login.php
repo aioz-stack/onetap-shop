@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Services\Administration\AuditLogger;
+use App\Services\Administration\SettingsService;
 use App\Services\Identity\LoginService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,9 +17,11 @@ use Inertia\Response;
 
 class Login extends Controller
 {
-    private const MAX_ATTEMPTS = 5;
-
-    public function __construct(private LoginService $loginService, private AuditLogger $auditLogger) {}
+    public function __construct(
+        private LoginService $loginService,
+        private AuditLogger $auditLogger,
+        private SettingsService $settings,
+    ) {}
 
     /**
      * Show the login screen.
@@ -40,8 +43,10 @@ class Login extends Controller
         ]);
 
         $throttleKey = Str::lower($validated['login']).'|'.$request->ip();
+        $maxAttempts = (int) $this->settings->get('security', 'max_login_attempts', 5);
+        $lockoutSeconds = (int) $this->settings->get('security', 'lockout_seconds', 60);
 
-        if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_ATTEMPTS)) {
+        if (RateLimiter::tooManyAttempts($throttleKey, $maxAttempts)) {
             throw ValidationException::withMessages([
                 'login' => 'Too many login attempts. Try again in '.RateLimiter::availableIn($throttleKey).' seconds.',
             ]);
@@ -50,7 +55,7 @@ class Login extends Controller
         try {
             $user = $this->loginService->verify($validated['login'], $validated['password']);
         } catch (ValidationException $exception) {
-            RateLimiter::hit($throttleKey, 60);
+            RateLimiter::hit($throttleKey, $lockoutSeconds);
 
             throw $exception;
         }

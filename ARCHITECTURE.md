@@ -101,6 +101,20 @@ layouts (Admin, Seller, Logistics, Rider), each with its own nav config. The Cus
 storefront layout (top header + search + category nav + footer). Rider layout is mobile-first
 (bottom tab bar).
 
+### Implemented services (Phase 3)
+
+| Service | Rule it owns |
+| --- | --- |
+| `Ordering\OrderStatusService` | Every seller-order status change. Transition map in `SellerOrderStatus::allowedTransitions()`; writes history, timestamps, audit and stock effects |
+| `Ordering\InventoryService` | Stock: `stock` = on hand, `reserved` = held by unshipped orders. Locks the row and writes `product_inventory` for every move |
+| `Ordering\RefundService` | Refund approve (optional restock, earnings clawback) and reject (restore the previous status) |
+| `Finance\LedgerService` | Append-only `transactions` and seller balance arithmetic (bcmath; balances never go negative) |
+| `Finance\WithdrawalService` | Payout lifecycle: request holds funds, approve, paid writes the ledger, reject refunds the hold |
+| `Finance\FinanceReportService` | Revenue recognised at seller-order completion |
+| `Catalog\SellerApprovalService`, `Catalog\ProductModerationService` | Seller and product standing |
+| `Identity\UserAccountService` | Staff accounts, role sync, suspension (revokes tokens and sessions), verification review |
+| `Administration\SettingsSchema` / `SettingsService` | Typed, validated, cached system settings |
+
 ## 4. Authentication and authorization
 
 - Login by **email or username**; registration for customers; seller onboarding = customer applies

@@ -4,12 +4,15 @@ namespace App\Models;
 
 use App\Enums\TransactionDirection;
 use App\Enums\TransactionType;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Transaction extends Model
 {
+    use HasFactory;
+
     /**
      * @var list<string>
      */

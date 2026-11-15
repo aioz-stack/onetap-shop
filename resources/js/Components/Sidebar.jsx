@@ -7,7 +7,8 @@ import { isActivePath } from '../lib/navigation';
  * Collapsible back-office sidebar. `nav` is a list of { heading, items: [{ label, href?, icon, exact? }] }.
  */
 export default function Sidebar({ sidebarToggle, nav = [], panelLabel, homeHref = '/dashboard' }) {
-  const { url } = usePage();
+  const { url, props } = usePage();
+  const counts = props.adminCounts ?? {};
 
   return (
     <aside
@@ -50,6 +51,14 @@ export default function Sidebar({ sidebarToggle, nav = [], panelLabel, homeHref 
                     <>
                       <AppIcon name={item.icon} className="h-5 w-5 shrink-0" />
                       <span className={`menu-item-text flex-1 ${sidebarToggle ? 'lg:hidden' : ''}`}>{item.label}</span>
+                      {item.badge && counts[item.badge] > 0 && (
+                        <span
+                          aria-label={`${counts[item.badge]} waiting`}
+                          className={`rounded-full bg-orange-500 px-2 py-0.5 text-[11px] font-semibold text-white ${sidebarToggle ? 'lg:hidden' : ''}`}
+                        >
+                          {counts[item.badge]}
+                        </span>
+                      )}
                       {!item.href && (
                         <span
                           className={`rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium uppercase text-gray-500 dark:bg-white/5 dark:text-gray-400 ${

@@ -5,14 +5,14 @@ Legend: ⬜ not started · 🟨 in progress · ✅ implemented **and tested**
 | Panel / Module | Features | Phase | Status |
 | --- | --- | --- | --- |
 | Core | Auth (login by email/username, register, logout), RBAC, account status, shared layouts, UI components | 2 | ✅ |
-| Admin — Dashboard | KPIs, sales analytics, recent transactions/activities | 3 | ⬜ |
-| Admin — Users | Customers, sellers, admins, logistics, riders, verification, suspend/reactivate | 3 | ⬜ |
-| Admin — Sellers | Applications, approve/reject, info, performance, violations | 3 | ⬜ |
-| Admin — Products | All/live/under review/violations/unpublished, categories, approve/reject | 3 | ⬜ |
-| Admin — Orders | Status tabs, return/refund handling | 3 | ⬜ |
-| Admin — Logistics | Partners, riders, coverage, pickup/shipment/COD monitoring, delivery fees | 3 | ⬜ |
-| Admin — Finance | Revenue, seller earnings, commission, logistics fees, settlements, remittances, reports | 3 | ⬜ |
-| Admin — Settings | General, branding, payment, shipping, notifications, API, security, audit logs | 3 | ⬜ |
+| Admin — Dashboard | KPIs, sales analytics, recent transactions/activities | 3 | ✅ |
+| Admin — Users | Customers, sellers, admins, logistics, riders, verification, suspend/reactivate | 3 | ✅ |
+| Admin — Sellers | Applications, approve/reject, info, performance, violations | 3 | ✅ |
+| Admin — Products | All/live/under review/violations/unpublished, categories, approve/reject | 3 | ✅ |
+| Admin — Orders | Status tabs, return/refund handling | 3 | ✅ |
+| Admin — Logistics | Partners, riders, coverage, pickup/shipment/COD monitoring, delivery fees | 3 | ✅ |
+| Admin — Finance | Revenue, seller earnings, commission, logistics fees, settlements, remittances, reports | 3 | ✅ |
+| Admin — Settings | General, branding, payment, shipping, notifications, API, security, audit logs | 3 | ✅ |
 | Customer — Storefront | Home (banners, categories, featured, recommended, shops, best sellers, new), search, listing, product detail | 4 | ⬜ |
 | Customer — Cart & Checkout | Seller-grouped cart, select items, shipping fee, COD checkout | 4 | ⬜ |
 | Customer — Account | Profile + photo, addresses, purchases, tracking, reviews, refunds, cancellations, notifications, chat, security, verification | 4 | ⬜ |

@@ -2,6 +2,17 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\ProductStatus;
+use App\Enums\RefundStatus;
+use App\Enums\RoleName;
+use App\Enums\SellerStatus;
+use App\Enums\VerificationStatus;
+use App\Enums\WithdrawalStatus;
+use App\Models\Product;
+use App\Models\Refund;
+use App\Models\SellerProfile;
+use App\Models\VerificationDocument;
+use App\Models\Withdrawal;
 use App\Services\Administration\SettingsService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -50,6 +61,14 @@ class HandleInertiaRequests extends Middleware
                 'tagline' => $this->settings->get('branding', 'tagline'),
                 'currency' => $this->settings->get('general', 'currency', 'PHP'),
             ],
+            // Work queues shown as sidebar badges. Only computed for admins on admin pages.
+            'adminCounts' => fn () => $user?->hasRole(RoleName::Admin) && $request->is('admin*') ? [
+                'sellers' => SellerProfile::query()->where('status', SellerStatus::Pending)->count(),
+                'products' => Product::query()->where('status', ProductStatus::UnderReview)->count(),
+                'refunds' => Refund::query()->where('status', RefundStatus::Requested)->count(),
+                'withdrawals' => Withdrawal::query()->where('status', WithdrawalStatus::Pending)->count(),
+                'verifications' => VerificationDocument::query()->where('status', VerificationStatus::Pending)->count(),
+            ] : null,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

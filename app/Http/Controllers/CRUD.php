@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\RoleName;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -44,7 +46,7 @@ class CRUD extends Controller
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'unique:users,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'role' => ['required', 'string', 'max:50'],
+            'role' => ['required', Rule::enum(RoleName::class)],
             'password' => ['required', 'string', 'min:6'],
             'profile_picture' => ['nullable', 'image', 'max:2048'],
         ]);
@@ -53,7 +55,9 @@ class CRUD extends Controller
             $validated['profile_picture'] = $request->file('profile_picture')->store('profile-pictures', 'public');
         }
 
-        User::create($validated);
+        // Roles live in user_roles; assignRole() also keeps the legacy column in sync.
+        $user = User::create(collect($validated)->except('role')->all());
+        $user->assignRole(RoleName::from($validated['role']));
 
         return redirect()->route('crud.index')->with('success', 'User created successfully.');
     }
@@ -87,7 +91,7 @@ class CRUD extends Controller
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'unique:users,username,'.$crud->id],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$crud->id],
-            'role' => ['required', 'string', 'max:50'],
+            'role' => ['required', Rule::enum(RoleName::class)],
             'password' => ['nullable', 'string', 'min:6'],
             'profile_picture' => ['nullable', 'image', 'max:2048'],
         ]);
@@ -105,7 +109,8 @@ class CRUD extends Controller
             $validated['profile_picture'] = $request->file('profile_picture')->store('profile-pictures', 'public');
         }
 
-        $crud->update($validated);
+        $crud->update(collect($validated)->except('role')->all());
+        $crud->assignRole(RoleName::from($validated['role']));
 
         return redirect()->route('crud.index')->with('success', 'User updated successfully.');
     }

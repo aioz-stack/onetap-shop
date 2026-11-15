@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Support\Money;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,8 +19,8 @@ class Dashboard extends Controller
             'stats' => [
                 'products' => $shop?->products()->count() ?? 0,
                 'orders' => $shop?->sellerOrders()->count() ?? 0,
-                'availableBalance' => (string) ($shop?->balance?->available_balance ?? '0.00'),
-                'pendingBalance' => (string) ($shop?->balance?->pending_balance ?? '0.00'),
+                'availableBalance' => Money::format(($shop?->balance?->available_balance ?? '0.00')),
+                'pendingBalance' => Money::format(($shop?->balance?->pending_balance ?? '0.00')),
             ],
         ]);
     }

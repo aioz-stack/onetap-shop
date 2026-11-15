@@ -1,6 +1,6 @@
 # Onetap Marketplace — Development Log
 
-**Current phase:** Phase 2 (Core Foundation) is complete. Phase 3 (Admin Panel) is next.
+**Current phase:** Phase 3 (Admin Panel) is complete. Phase 4 (Customer Panel) is next.
 
 ## Setup
 
@@ -108,15 +108,92 @@ If you only need the server, run `npm run build` once and then `php artisan serv
   - 55 tests pass, `npm run build` works, and the pages and API respond on the running server.
 - npm noted that esbuild's postinstall script is not on its `allowScripts` list. The build works without it. Run `npm install-scripts approve esbuild` if a future build complains.
 
+## Phase 3 — Admin Panel — done (2026-11-15)
+
+**Shared domain services.** Later panels must reuse these rather than reimplement them.
+- `Ordering\OrderStatusService` is the only place a seller order's status changes. It enforces the transition map in `SellerOrderStatus::allowedTransitions()`, stamps timestamps, writes `order_status_histories`, audits the change, and applies stock effects:
+  - cancel → release the reservation
+  - ship → convert the reservation into a sale and update `sold_count`
+  - return → restock
+- `Ordering\InventoryService`: reserve, release, sale, return, restock and adjust. Every change locks the row (`lockForUpdate`) and writes a `product_inventory` ledger row.
+- `Ordering\RefundService`:
+  - Approve, optionally restocking returned items. A refund transaction is recorded, and the seller's earning is clawed back if it was already credited.
+  - Reject, which restores the order's status from before the return.
+- `Finance\LedgerService`: append-only `transactions`, plus seller balance moves (`creditPending`, `creditAvailable`, `debitAvailable`, `clawBack`). All math uses bcmath; balances never go negative.
+- `Finance\WithdrawalService`: request (holds the amount out of available) → approve → mark paid (ledger entry, `total_withdrawn`). Reject returns the held amount.
+- `Finance\FinanceReportService`: GMV, commission, seller earnings, logistics fees, refunds and payouts, per range and per month. Revenue is recognised at order completion.
+- `Catalog\SellerApprovalService`:
+  - Approve grants the seller role and opens the shop and its balance.
+  - Reject records the reason.
+  - Suspend hides the shop, unpublishes live products and removes the seller role.
+  - Reinstate restores the shop and role; products stay unpublished until the seller republishes them.
+- `Catalog\ProductModerationService`: approve (needs an active variation), reject, unpublish, flag violation, resolve violations (back to review).
+- `Identity\UserAccountService`:
+  - Create and update staff accounts with role sync.
+  - Suspend: revokes API tokens and deletes sessions. Admins cannot suspend themselves or drop their own admin role.
+  - Reactivate, and review verification documents.
+- `Logistics\LogisticsPartnerService`: create a partner together with its operator account, update it, and change rider status.
+- `Administration\SettingsSchema`: the single definition of every editable setting (type, rules, default, public). The settings page and its seeder are generated from it.
+- `App\Support\Money::format()` normalizes money totals, because SUM() returns different types on MySQL and SQLite.
+
+**Admin panel.** 61 routes under `/admin`, all `role:admin`, every write audited.
+- **Dashboard:** 10 KPIs, a 30-day sales and orders chart, recent transactions and recent activity.
+- **People:**
+  - Users: role tabs, status filter, search, create staff, edit roles, suspend (with a reason) and reactivate.
+  - Verification: queue of documents streamed from the private disk; approve or reject.
+  - Sellers: pending, approved, rejected and suspended tabs; detail page with performance (GMV, cancellation rate, rating) and violations.
+- **Catalog:**
+  - Products: status tabs, category-tree filter, search; detail page with images, variations and stock (on hand, reserved, available), and violation history.
+  - Categories: two-level tree with add, edit, show/hide and sort. Deleting is only allowed when a category is empty.
+- **Orders:**
+  - Orders: tabs (Unpaid, To Ship, Shipping, Completed, Cancelled, Return/Refund), search, date range; detail page with items, totals, commission, customer, address, payment, shipment and a status timeline; cancel with a reason.
+  - Returns & refunds: approve (optional restock) or reject.
+- **Logistics:**
+  - Partners: create with an operator account, edit; coverage areas by city or barangay with fee overrides, deduplicated.
+  - Riders across all partners: filters, performance numbers, approve, suspend and activate.
+  - Shipment monitoring tabs, and COD monitoring (collections, remittances, discrepancies).
+- **Finance:** overview with a 6-month chart; transactions ledger with filters and CSV export; seller settlements (approve → record payment with a bank reference, or reject); 12-month report with CSV download.
+- **Settings:** 9 groups (general, branding, payment, shipping, finance, orders, notifications, API, security).
+  - Wired into the app: login lockout attempts and duration, API rate limit, API token lifetime, and public settings shared with the frontend (e.g. the marketplace name).
+- **Audit logs:** filter by area, user or IP, and date; view before/after changes.
+- **Sidebar:** badge counts for pending sellers, products under review, refund requests, withdrawals and documents to verify.
+
+**Cleanup**
+- The starter `CRUD` now validates the role against `RoleName` and attaches it through `assignRole()`, so `user_roles` stays consistent. It is no longer in the nav, because `/admin/users` replaces it.
+- Removed the unused starter demo page `Pages/Dashboard.jsx`.
+- Fixed `SettingsService`: saving a setting now also clears the public-settings cache.
+- `Card` now has `min-w-0`, so wide tables scroll inside their card on phones instead of stretching the page.
+
+## Phase 3 testing results (2026-11-15)
+
+- `php artisan test`: **126 passed, 1084 assertions** (71 new). They cover:
+  - every admin page and detail page rendering, and 403 for all four other roles;
+  - user filters, staff creation, role sync, self-protection, suspension revoking tokens, verification review and private file access;
+  - seller approve, reject, suspend and reinstate with their side effects, and seller performance figures;
+  - product moderation transitions and filters, and category nesting and delete guards;
+  - order tabs and search, cancel releasing stock, shipping converting reservations into sales, reservation limits, refund restock and clawback, refund reject restoring status, invalid transitions;
+  - the withdrawal lifecycle and balances, finance figures, CSV exports;
+  - partner creation with operator login, coverage CRUD and dedup, rider suspension;
+  - settings validation, persistence and audit; lockout and token expiry following settings; audit log filters.
+- Browser check on MySQL as admin:
+  - All 20 admin pages return 200 with the correct page and render without client errors.
+  - Created and then deleted a category through the modal. Deleting "Groceries" was blocked with an error toast.
+  - Suspended the QA customer: an empty reason showed the required-field error, a real reason saved with the toast, and reactivating restored the account.
+  - The audit log shows both actions. The transactions CSV downloads with the right headers, and the report CSV has 12 months plus a header row.
+  - No horizontal overflow at 375px on 8 admin pages after the `min-w-0` fix.
+
 ## Known issues / notes
 
-- The migrations reached MySQL before the explicit `php artisan migrate` step: that step reported "Nothing to migrate" (all 15 already in batch 1). Nothing was dropped and the database was empty beforehand. The earliest migration run was meant to target in-memory SQLite.
-- The starter `CRUD` controller still writes the free-text `users.role` column and does not touch `user_roles`. Phase 3 replaces it with full user management.
-- The starter demo page `Pages/Dashboard.jsx` (static TailAdmin charts) is unused. It is code-split so it never loads. Remove it in Phase 3.
-- Sidebar entries marked "Soon" are disabled placeholders for modules in later phases.
+- The migrations reached MySQL before the explicit `php artisan migrate` step: that step reported "Nothing to migrate" (all 15 already in batch 1). Nothing was dropped and the database was empty beforehand.
+- **The `general.timezone` setting is stored but not applied.** The app clock is still `config('app.timezone')` = UTC (for example, CSV file names use UTC). Switching the app timezone changes how existing timestamps are read, so it needs a deliberate decision.
+- Notification settings (admin email and event toggles) are stored, but no emails are sent until notifications are built in Phase 8.
+- The branding color setting is for emails and the future mobile apps; the web theme uses the built-in palette.
+- Shipments, COD collections, remittances, refund requests, withdrawal requests and verification uploads are created by later phases (4–7). Their admin screens are built and tested with factory data, but they are empty on the real database until then.
+- Sidebar entries marked "Soon" in the seller and logistics panels are placeholders for Phases 5–6.
 - Storefront search and category links return a "coming soon" state until Phase 4.
 - Demo passwords are weak by design and the seeder is limited to local and testing environments.
+- Dev database leftovers: `qa_customer` (from the Phase 2 sign-up check, active again after the suspend/reactivate check).
 
-## Next tasks (Phase 3: Admin Panel)
+## Next tasks (Phase 4: Customer Panel)
 
-User management (verification, suspend/reactivate), seller approvals, product categories and moderation, order management tabs, logistics partner and coverage management, finance views, system settings, audit log viewer.
+Storefront home sections from live data, search and category browsing, product detail with variations, reviews and ratings, seller-grouped cart, COD checkout that creates orders and seller orders and reserves stock (through `InventoryService`), and the My Account area (profile and photo, addresses, purchases and tracking, reviews, refunds, cancellations, notifications, verification uploads).

@@ -3,34 +3,56 @@
  *
  * Items without an `href` belong to a later phase. They render as disabled entries
  * labeled "Soon" so the full panel structure is visible without dead links.
- * When a module ships, give its item an `href`.
+ * `badge` names a key in the shared `adminCounts` prop; its number shows next to the item.
  */
 
 export const adminNav = [
   { heading: 'Overview', items: [{ label: 'Dashboard', href: '/admin', icon: 'grid', exact: true }] },
   {
-    heading: 'Marketplace',
+    heading: 'People',
     items: [
-      { label: 'Users', href: '/crud', icon: 'users' },
-      { label: 'Sellers', icon: 'store' },
-      { label: 'Products', icon: 'box' },
-      { label: 'Categories', icon: 'layers' },
-      { label: 'Orders', icon: 'receipt' },
+      { label: 'Users', href: '/admin/users', icon: 'users' },
+      { label: 'Verification', href: '/admin/verifications', icon: 'shield', badge: 'verifications' },
+      { label: 'Sellers', href: '/admin/sellers', icon: 'store', badge: 'sellers' },
     ],
   },
   {
-    heading: 'Operations',
+    heading: 'Catalog',
     items: [
-      { label: 'Logistics', icon: 'truck' },
-      { label: 'Finance', icon: 'wallet' },
-      { label: 'Reports', icon: 'chart' },
+      { label: 'Products', href: '/admin/products', icon: 'box', badge: 'products' },
+      { label: 'Categories', href: '/admin/categories', icon: 'layers' },
+    ],
+  },
+  {
+    heading: 'Orders',
+    items: [
+      { label: 'Orders', href: '/admin/orders', icon: 'receipt' },
+      { label: 'Returns & Refunds', href: '/admin/refunds', icon: 'cart', badge: 'refunds' },
+    ],
+  },
+  {
+    heading: 'Logistics',
+    items: [
+      { label: 'Partners & Coverage', href: '/admin/logistics/partners', icon: 'truck' },
+      { label: 'Riders', href: '/admin/logistics/riders', icon: 'bike' },
+      { label: 'Shipments', href: '/admin/logistics/shipments', icon: 'map' },
+      { label: 'COD Monitoring', href: '/admin/logistics/cod', icon: 'cash' },
+    ],
+  },
+  {
+    heading: 'Finance',
+    items: [
+      { label: 'Overview', href: '/admin/finance', icon: 'wallet', exact: true },
+      { label: 'Transactions', href: '/admin/finance/transactions', icon: 'clipboard' },
+      { label: 'Seller Settlements', href: '/admin/finance/withdrawals', icon: 'cash', badge: 'withdrawals' },
+      { label: 'Reports', href: '/admin/finance/reports', icon: 'chart' },
     ],
   },
   {
     heading: 'System',
     items: [
-      { label: 'Settings', icon: 'settings' },
-      { label: 'Audit Logs', icon: 'shield' },
+      { label: 'Settings', href: '/admin/settings', icon: 'settings' },
+      { label: 'Audit Logs', href: '/admin/audit-logs', icon: 'shield' },
     ],
   },
 ];

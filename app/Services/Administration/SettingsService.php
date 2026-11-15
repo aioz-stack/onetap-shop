@@ -20,7 +20,13 @@ class SettingsService
     public function set(string $group, string $key, ?string $value): void
     {
         SystemSetting::query()->updateOrCreate(['group' => $group, 'key' => $key], ['value' => $value]);
+        $this->flush();
+    }
+
+    public function flush(): void
+    {
         Cache::forget(self::CACHE_KEY);
+        Cache::forget(self::CACHE_KEY.'.public');
     }
 
     /**

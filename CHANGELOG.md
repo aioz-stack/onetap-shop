@@ -2,6 +2,32 @@
 
 ## [Unreleased]
 
+### 2026-11-15 — Phase 3 (Admin Panel)
+
+**Added**
+- The complete admin panel: 61 routes and 25 pages.
+  - Dashboard with KPIs and a sales chart.
+  - Users, verification, sellers, products, categories, orders, returns and refunds.
+  - Logistics partners and coverage, riders, shipment and COD monitoring.
+  - Finance overview, transactions with CSV export, seller settlements, and monthly reports with CSV export.
+  - Settings (9 groups) and the audit log viewer.
+- Shared domain services: order status machine, inventory ledger, refunds, money ledger and seller balances, withdrawals, finance reports, seller approval, product moderation, account management, logistics partners, and a settings schema.
+- Settings are wired into the login lockout, the API rate limit, API token expiry and the frontend's public settings.
+- Sidebar work-queue badges.
+- Admin components: `ActionButton` (confirm + reason + submit), filter selects, date range, status tabs, detail list.
+- 14 model factories and 71 feature tests (126 total, all passing).
+
+**Changed**
+- The starter CRUD validates roles and syncs them through `user_roles`. It is no longer in the nav.
+- Money totals are normalized to two-decimal strings (`App\Support\Money`).
+- `Card` has `min-w-0` so tables scroll inside it on phones.
+
+**Removed**
+- The unused starter demo page `Pages/Dashboard.jsx`.
+
+**Fixed**
+- Saving a setting now also clears the cached public settings.
+
 ### 2026-11-15 — Security dependency update
 - Updated Composer packages within the existing ranges (Laravel 13.42.0, inertia-laravel 3.7.0, league/commonmark 2.10.7, Symfony patches; transitive guzzle 8 and symfony/yaml 8). This cleared all 12 `composer audit` advisories.
 - `npm audit fix` updated axios to 1.21.1 and follow-redirects to 1.16.3, clearing 2 high-severity advisories.

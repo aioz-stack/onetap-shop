@@ -132,6 +132,14 @@ class User extends Authenticatable
     }
 
     /**
+     * @return HasMany<VerificationDocument, $this>
+     */
+    public function verificationDocuments(): HasMany
+    {
+        return $this->hasMany(VerificationDocument::class);
+    }
+
+    /**
      * @return HasOne<ShoppingCart, $this>
      */
     public function cart(): HasOne
