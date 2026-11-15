@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\RiderCollection;
 use App\Models\RiderProfile;
 use App\Models\Shipment;
+use App\Services\Communication\Notifier;
 use App\Support\Money;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -142,6 +143,7 @@ class DeliveryService
         return DB::transaction(function () use ($shipment, $rider, $job, $reason) {
             $updated = $this->statuses->transition($shipment, ShipmentStatus::PendingPickup, $rider->user, "Declined by rider: {$reason}");
             $job->forceFill(['status' => AssignmentStatus::Declined])->save();
+            app(Notifier::class)->riderDeclined($updated, $rider->user, $reason);
 
             return $updated;
         });

@@ -189,7 +189,17 @@ class Products extends SellerController
      */
     private function validated(Request $request, bool $creating): array
     {
-        return $request->validate([
+        return $request->validate(self::rules($creating), self::messages());
+    }
+
+    /**
+     * Product form rules, shared with the seller API.
+     *
+     * @return array<string, mixed>
+     */
+    public static function rules(bool $creating): array
+    {
+        return [
             'name' => ['required', 'string', 'min:3', 'max:150'],
             'description' => ['nullable', 'string', 'max:5000'],
             'brand' => ['nullable', 'string', 'max:100'],
@@ -208,12 +218,20 @@ class Products extends SellerController
             'remove_images.*' => ['integer'],
             'primary_image_id' => ['nullable', 'integer'],
             'submit' => ['boolean'],
-        ], [
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function messages(): array
+    {
+        return [
             'variations.*.label.distinct' => 'Each variation needs a different name.',
             'variations.*.compare_at_price.gte' => 'The original price must be at least the selling price.',
             'images.required' => 'Add at least one photo.',
             'images.*.dimensions' => 'Photos must be between 200 and 5000 pixels wide and tall.',
-        ]);
+        ];
     }
 
     /**

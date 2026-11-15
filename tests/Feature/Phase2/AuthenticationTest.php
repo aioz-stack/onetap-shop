@@ -119,8 +119,9 @@ test('login is throttled after repeated failures', function () {
         $this->post('/login', ['login' => 'target', 'password' => 'wrong']);
     }
 
-    $this->post('/login', ['login' => 'target', 'password' => 'password'])
-        ->assertSessionHasErrors(['login' => 'Too many login attempts. Try again in 60 seconds.']);
+    // The countdown can tick from 60 to 59 seconds while the test runs, so match the message prefix.
+    $this->post('/login', ['login' => 'target', 'password' => 'password'])->assertSessionHasErrors('login');
+    expect(session('errors')->first('login'))->toMatch('/^Too many login attempts\. Try again in (59|60) seconds\.$/');
 
     $this->assertGuest();
 });

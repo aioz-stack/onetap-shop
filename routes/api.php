@@ -3,8 +3,11 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\LogisticsController;
 use App\Http\Controllers\Api\V1\RiderController;
+use App\Http\Controllers\Api\V1\SellerController;
 use App\Http\Controllers\Api\V1\ShoppingController;
+use App\Http\Controllers\NotificationsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -50,6 +53,45 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:api')->group(function
         Route::get('orders/{order}', [ShoppingController::class, 'order'])->name('orders.show');
         Route::post('orders/{order}/cancel', [ShoppingController::class, 'cancelOrder'])->name('orders.cancel');
         Route::post('orders/{order}/confirm-received', [ShoppingController::class, 'confirmOrder'])->name('orders.confirm');
+        Route::post('orders/{order}/refund', [ShoppingController::class, 'requestRefund'])->middleware('throttle:10,1')->name('orders.refund');
+        Route::get('refunds', [ShoppingController::class, 'refunds'])->name('refunds.index');
+        Route::post('order-items/{item}/review', [ShoppingController::class, 'review'])->middleware('throttle:20,1')->name('reviews.store');
+    });
+
+    // Seller Center: the signed-in seller's own shop only.
+    Route::prefix('seller')->name('seller.')->middleware(['auth:sanctum', 'active', 'role:seller', 'seller.shop'])->group(function () {
+        Route::get('dashboard', [SellerController::class, 'dashboard'])->name('dashboard');
+        Route::get('products', [SellerController::class, 'products'])->name('products.index');
+        Route::post('products', [SellerController::class, 'storeProduct'])->middleware('throttle:30,1')->name('products.store');
+        Route::get('products/{product}', [SellerController::class, 'product'])->name('products.show');
+        Route::post('products/{product}', [SellerController::class, 'updateProduct'])->middleware('throttle:30,1')->name('products.update');
+        Route::delete('products/{product}', [SellerController::class, 'destroyProduct'])->name('products.destroy');
+        Route::post('products/{product}/{action}', [SellerController::class, 'productAction'])->whereIn('action', ['submit', 'unpublish', 'republish'])->name('products.action');
+        Route::patch('variations/{variation}/stock', [SellerController::class, 'adjustStock'])->name('variations.stock');
+        Route::get('orders', [SellerController::class, 'orders'])->name('orders.index');
+        Route::get('orders/{order}', [SellerController::class, 'order'])->name('orders.show');
+        Route::post('orders/{order}/status', [SellerController::class, 'orderStatus'])->name('orders.status');
+    });
+
+    // Logistics partner: own shipments and riders only.
+    Route::prefix('logistics')->name('logistics.')->middleware(['auth:sanctum', 'active', 'role:logistics', 'logistics.partner'])->group(function () {
+        Route::get('dashboard', [LogisticsController::class, 'dashboard'])->name('dashboard');
+        Route::get('shipments', [LogisticsController::class, 'shipments'])->name('shipments.index');
+        Route::get('shipments/{shipment}', [LogisticsController::class, 'shipment'])->name('shipments.show');
+        Route::post('shipments/{shipment}/assign', [LogisticsController::class, 'assign'])->name('shipments.assign');
+        Route::post('shipments/{shipment}/unassign', [LogisticsController::class, 'unassign'])->name('shipments.unassign');
+        Route::get('riders', [LogisticsController::class, 'riders'])->name('riders.index');
+        Route::post('riders', [LogisticsController::class, 'storeRider'])->name('riders.store');
+        Route::get('riders/{rider}', [LogisticsController::class, 'rider'])->name('riders.show');
+        Route::put('riders/{rider}', [LogisticsController::class, 'updateRider'])->name('riders.update');
+        Route::post('riders/{rider}/status', [LogisticsController::class, 'riderStatus'])->name('riders.status');
+    });
+
+    // Inbox for every signed-in role.
+    Route::middleware(['auth:sanctum', 'active'])->group(function () {
+        Route::get('notifications', [NotificationsController::class, 'index'])->name('notifications.index');
+        Route::post('notifications/read-all', [NotificationsController::class, 'readAll'])->name('notifications.read-all');
+        Route::post('notifications/{id}/read', [NotificationsController::class, 'markRead'])->name('notifications.read');
     });
 
     // Rider app: own assignments only.

@@ -32,9 +32,17 @@ class FinanceReportService
             ->when($from, fn ($query) => $query->where('created_at', '>=', $from))
             ->when($to, fn ($query) => $query->where('created_at', '<=', $to));
 
+        $platformVouchers = $this->sum(Transaction::query()
+            ->where('type', TransactionType::PlatformVoucher)
+            ->when($from, fn ($query) => $query->where('created_at', '>=', $from))
+            ->when($to, fn ($query) => $query->where('created_at', '<=', $to)), 'amount');
+        $commission = $this->sum((clone $completed), 'commission_amount');
+
         return [
             'gmv' => $this->sum((clone $completed), 'total'),
-            'commission' => $this->sum((clone $completed), 'commission_amount'),
+            'commission' => $commission,
+            'platformVouchers' => $platformVouchers,
+            'netRevenue' => bcsub($commission, $platformVouchers, 2),
             'sellerEarnings' => $this->sum((clone $completed), 'seller_earning'),
             'logisticsFees' => $this->sum(Shipment::query()
                 ->where('status', ShipmentStatus::Delivered)

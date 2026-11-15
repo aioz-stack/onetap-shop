@@ -10,6 +10,7 @@ use App\Models\SellerProfile;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\Administration\AuditLogger;
+use App\Services\Communication\Notifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -46,6 +47,7 @@ class SellerApprovalService
 
             $profile->user->assignRole(RoleName::Seller);
             $this->auditLogger->log('seller.approved', $profile, actor: $admin);
+            app(Notifier::class)->sellerReviewed($profile, true);
 
             return $profile->refresh();
         });
@@ -57,6 +59,7 @@ class SellerApprovalService
 
         $profile->forceFill(['status' => SellerStatus::Rejected, 'rejection_reason' => $reason])->save();
         $this->auditLogger->log('seller.rejected', $profile, newValues: ['reason' => $reason], actor: $admin);
+        app(Notifier::class)->sellerReviewed($profile, false, $reason);
 
         return $profile;
     }

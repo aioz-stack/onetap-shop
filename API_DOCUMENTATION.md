@@ -45,6 +45,9 @@ Active top-level categories with active `children[]`, ordered by `sort_order`.
 | GET | /orders/{id} | Seller order with items, address, timeline, shipment, refund, `can{cancel, confirm_received, request_refund, review}` |
 | POST | /orders/{id}/cancel | `reason`; only while Unpaid or Pending; releases stock |
 | POST | /orders/{id}/confirm-received | Delivered → Completed; posts commission and the seller's pending earning |
+| POST | /orders/{id}/refund | `reason, details?, amount?` (≤ items total) → 201; Delivered or Completed orders, one open request at a time. Throttled 10/min |
+| GET | /refunds | Your refund requests, paginated |
+| POST | /order-items/{id}/review | `rating 1–5, comment?` → 201; items of your completed orders, once each. Throttled 20/min |
 
 ### Rider ✅ (Bearer, rider role)
 
@@ -62,37 +65,54 @@ Riders only see and act on their own assignments; anyone else's parcel returns `
 | GET | /api/v1/rider/cod | — | `{ data: { summary, collections, earnings (7 days), remittances } }` |
 | POST | /api/v1/rider/cod/remittances | `amount`, optional `notes` | `201` remittance `{ id, date, expected_amount, remitted_amount, discrepancy, status }`; 10/min |
 
-## Planned
+### Notifications ✅ (Bearer, any role)
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | /api/v1/notifications | `?unread=1` to filter; `{ data: [{ id, type, title, body, url, read, created_at }], meta: { …pagination, unread } }` |
+| POST | /api/v1/notifications/{id}/read | Marks one read; 404 for anyone else's |
+| POST | /api/v1/notifications/read-all | `{ unread: 0 }` |
+
+`type` values: `seller.applied`, `seller.approved`, `seller.rejected`, `product.approved|rejected|violation|unpublished`, `refund.requested|approved|rejected`, `withdrawal.requested|approved|paid|rejected`, `order.cancelled`, `order.completed`, `delivery.out`, `delivery.failed`, `shipment.new`, `shipment.unrouted`, `job.declined`, `job.removed`, `remittance.submitted|confirmed|disputed`. Older order/assignment alerts have no `type`.
+
+### Seller ✅ (Bearer, seller role with an approved shop)
+Everything is scoped to the signed-in seller's shop; other shops' products and orders return `404`. Validation is the same as the web Seller Center.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | /api/v1/seller/dashboard | `{ shop, stats: { total_sales, orders, pending_orders, products_sold, products, pending_balance, available_balance } }` |
+| GET | /api/v1/seller/products | `?status=draft|under_review|live|rejected|violation|unpublished`, `?search=` |
+| GET | /api/v1/seller/products/{id} | Detail with images and variations |
+| POST | /api/v1/seller/products | multipart: `name, product_category_id, description?, brand?, weight_grams?, variations[][label, price, compare_at_price?, stock, is_active?], images[] (1–8, jpg/png/webp ≤4 MB, 200–5000 px), submit?` → 201 (`draft`, or `under_review` with `submit=1`) |
+| POST | /api/v1/seller/products/{id} | Update (multipart, same fields; images optional; `variations[][id]` keeps existing ones; `remove_images[]`, `primary_image_id`) |
+| POST | /api/v1/seller/products/{id}/submit · /unpublish · /republish | Status actions |
+| DELETE | /api/v1/seller/products/{id} | 204; past orders keep their details |
+| PATCH | /api/v1/seller/variations/{id}/stock | `stock, note?` → `{ id, stock, reserved, available }` |
+| GET | /api/v1/seller/orders | `?tab=unpaid|to_ship|shipping|completed|cancelled|return_refund` |
+| GET | /api/v1/seller/orders/{id} | With delivery address and history |
+| POST | /api/v1/seller/orders/{id}/status | `action: accept|ready|cancel`, `reason` required to cancel. `ready` creates the shipment and routes it to the covering partner |
+
+### Logistics ✅ (Bearer, logistics role with an active partner)
+Scoped to the signed-in partner; other partners' shipments and riders return `404`.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | /api/v1/logistics/dashboard | Shipment counts per tab, active riders, COD collected today and unremitted |
+| GET | /api/v1/logistics/shipments | `?tab=incoming|assigned|in_transit|out_for_delivery|delivered|failed|returned`, `?search=` |
+| GET | /api/v1/logistics/shipments/{id} | Addresses, history, proof, collection |
+| POST | /api/v1/logistics/shipments/{id}/assign | `rider_id` (one of your active riders) |
+| POST | /api/v1/logistics/shipments/{id}/unassign | `reason` |
+| GET | /api/v1/logistics/riders | `?status=pending|active|suspended`, with open job counts |
+| GET | /api/v1/logistics/riders/{id} | With performance |
+| POST | /api/v1/logistics/riders | `name, username, email, phone, password, vehicle_type, plate_number?, license_number?, activate?` → 201 |
+| PUT | /api/v1/logistics/riders/{id} | `name, email, phone, vehicle_type, plate_number?, license_number?, password?` |
+| POST | /api/v1/logistics/riders/{id}/status | `action: approve|suspend` (suspending requeues their uncollected pickups) |
+
+## Conventions
 
 - Base path: `/api/v1`
 - Auth: Laravel Sanctum bearer tokens (`Authorization: Bearer <token>`), issued by `/auth/login`
-- Format: JSON; responses use Eloquent API Resources `{ "data": ..., "meta": {pagination} }`
-- Errors: `422` validation `{ message, errors }`, `401`, `403`, `404`, `429`
-- Rate limits: `auth` 5/min per IP+identifier, general `api` 60/min per user, checkout 10/min
+- Format: JSON; lists return `{ "data": [...], "meta": {pagination} }`
+- Errors: `422` validation `{ message, errors }`, `401`, `403` (wrong role or inactive shop/partner), `404` (not found or not yours), `429`
+- Rate limits: `auth` 5/min per IP+identifier, general `api` per user (admin setting, default 60/min), checkout 10/min, plus the per-endpoint limits above
 
-| Method | Path | Role | Purpose |
-| --- | --- | --- | --- |
-| POST | /auth/register | guest | Customer registration |
-| POST | /auth/login | guest | Issue token |
-| POST | /auth/logout | any | Revoke current token |
-| GET | /auth/me | any | Current user + roles |
-| GET | /products | public | List/search/filter (q, category, shop, min/max price, sort) |
-| GET | /products/{slug} | public | Product detail with variations, images, reviews |
-| GET | /categories | public | Category tree |
-| GET | /shops, /shops/{slug} | public | Shops and shop products |
-| GET/POST/PATCH/DELETE | /cart, /cart/items/{id} | customer | Cart management |
-| POST | /orders | customer | Checkout (COD) |
-| GET | /orders, /orders/{id} | customer | Order history and tracking |
-| POST | /orders/{id}/cancel, /orders/{id}/confirm-received, /orders/{id}/refund | customer | Order actions |
-| GET/PUT | /customer/profile | customer | Profile |
-| GET/POST/PUT/DELETE | /customer/addresses | customer | Addresses |
-| POST | /reviews | customer | Review a delivered item |
-| GET | /seller/dashboard | seller | Stats |
-| GET/POST/PUT/DELETE | /seller/products | seller | Product CRUD |
-| GET | /seller/orders | seller | Orders by status |
-| POST | /seller/orders/{id}/status | seller | Process / ready for pickup / cancel |
-| GET | /logistics/shipments | logistics | Shipments by status |
-| POST | /logistics/shipments/{id}/assign | logistics | Assign rider |
-| GET/POST/PUT | /logistics/riders | logistics | Rider management |
-
-This table is updated as each endpoint is implemented and tested.
+Admin features stay web-only for now; there are no admin API endpoints. Every endpoint planned in Phase 1 for customers, sellers, logistics and riders is implemented.

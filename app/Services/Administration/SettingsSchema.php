@@ -66,12 +66,14 @@ class SettingsSchema
             ],
             'notifications' => [
                 'label' => 'Notifications',
-                'description' => 'Which events notify the admin team.',
+                'description' => 'Which events notify the admin team, and whether users are also emailed.',
                 'fields' => [
                     'admin_email' => ['label' => 'Admin notification email', 'type' => 'email', 'rules' => ['nullable', 'email'], 'public' => false, 'default' => ''],
                     'notify_seller_applications' => ['label' => 'New seller applications', 'type' => 'boolean', 'rules' => ['required', 'boolean'], 'public' => false, 'default' => '1'],
                     'notify_refund_requests' => ['label' => 'New refund requests', 'type' => 'boolean', 'rules' => ['required', 'boolean'], 'public' => false, 'default' => '1'],
                     'notify_withdrawal_requests' => ['label' => 'New withdrawal requests', 'type' => 'boolean', 'rules' => ['required', 'boolean'], 'public' => false, 'default' => '1'],
+                    'notify_unrouted_shipments' => ['label' => 'Shipments no logistics partner covers', 'type' => 'boolean', 'rules' => ['required', 'boolean'], 'public' => false, 'default' => '1'],
+                    'email_users' => ['label' => 'Also email users their account alerts', 'type' => 'boolean', 'rules' => ['required', 'boolean'], 'public' => false, 'default' => '0', 'hint' => 'Customers, sellers, logistics partners and riders always get alerts in their Onetap inbox. Turn this on to email them too (uses the mail settings in .env).'],
                 ],
             ],
             'api' => [

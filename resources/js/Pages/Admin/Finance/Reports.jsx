@@ -8,13 +8,13 @@ const money = (key) => ({ key, className: 'text-right whitespace-nowrap', header
 export default function Reports({ monthly }) {
   const totals = monthly.reduce(
     (sum, row) => {
-      ['gmv', 'commission', 'sellerEarnings', 'logisticsFees', 'refunds', 'paidOut'].forEach((key) => {
+      ['gmv', 'commission', 'platformVouchers', 'netRevenue', 'sellerEarnings', 'logisticsFees', 'refunds', 'paidOut'].forEach((key) => {
         sum[key] += Number(row[key]);
       });
 
       return sum;
     },
-    { month: 'total', label: 'Last 12 months', gmv: 0, commission: 0, sellerEarnings: 0, logisticsFees: 0, refunds: 0, paidOut: 0 },
+    { month: 'total', label: 'Last 12 months', gmv: 0, commission: 0, platformVouchers: 0, netRevenue: 0, sellerEarnings: 0, logisticsFees: 0, refunds: 0, paidOut: 0 },
   );
 
   return (
@@ -39,6 +39,8 @@ export default function Reports({ monthly }) {
             { key: 'label', label: 'Month', render: (row) => <span className={row.month === 'total' ? 'font-semibold' : ''}>{row.label}</span> },
             { ...money('gmv'), label: 'GMV' },
             { ...money('commission'), label: 'Commission' },
+            { ...money('platformVouchers'), label: 'Platform vouchers' },
+            { ...money('netRevenue'), label: 'Net revenue' },
             { ...money('sellerEarnings'), label: 'Seller earnings' },
             { ...money('logisticsFees'), label: 'Logistics fees' },
             { ...money('refunds'), label: 'Refunds' },

@@ -10,9 +10,12 @@ use App\Http\Resources\AddressResource;
 use App\Http\Resources\CustomerOrderResource;
 use App\Http\Resources\UserResource;
 use App\Models\CartItem;
+use App\Models\OrderItem;
 use App\Models\ProductVariation;
+use App\Models\Refund;
 use App\Models\SellerOrder;
 use App\Models\UserAddress;
+use App\Services\Catalog\ReviewService;
 use App\Services\Identity\AccountService;
 use App\Services\Ordering\CartService;
 use App\Services\Ordering\CheckoutService;
@@ -173,5 +176,38 @@ class ShoppingController extends Controller
     public function confirmOrder(Request $request, SellerOrder $order): CustomerOrderResource
     {
         return new CustomerOrderResource($this->orders->confirmReceived($order, $request->user())->load(['order', 'shop']));
+    }
+
+    public function requestRefund(Request $request, SellerOrder $order): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:255'],
+            'details' => ['nullable', 'string', 'max:2000'],
+            'amount' => ['nullable', 'numeric', 'min:1'],
+        ]);
+        $refund = $this->orders->requestRefund($order, $request->user(), $validated);
+
+        return response()->json(['data' => $refund->only(['id', 'reason', 'details', 'amount']) + ['status' => $refund->status->value, 'seller_order_id' => $order->id]], 201);
+    }
+
+    public function refunds(Request $request): JsonResponse
+    {
+        $refunds = Refund::query()->where('user_id', $request->user()->id)->with('sellerOrder:id,reference')->latest('id')->paginate(20);
+
+        return response()->json([
+            'data' => $refunds->getCollection()->map(fn (Refund $refund) => $refund->only(['id', 'reason', 'amount']) + ['status' => $refund->status->value, 'order' => $refund->sellerOrder?->reference, 'created_at' => $refund->created_at?->toIso8601String()])->values(),
+            'meta' => ['current_page' => $refunds->currentPage(), 'last_page' => $refunds->lastPage(), 'total' => $refunds->total()],
+        ]);
+    }
+
+    /**
+     * Review one item of a completed order.
+     */
+    public function review(Request $request, OrderItem $item): JsonResponse
+    {
+        $validated = $request->validate(['rating' => ['required', 'integer', 'between:1,5'], 'comment' => ['nullable', 'string', 'max:2000']]);
+        $review = app(ReviewService::class)->create($item, $request->user(), $validated['rating'], $validated['comment'] ?? null);
+
+        return response()->json(['data' => $review->only(['id', 'product_id', 'rating', 'comment']) + ['created_at' => $review->created_at?->toIso8601String()]], 201);
     }
 }

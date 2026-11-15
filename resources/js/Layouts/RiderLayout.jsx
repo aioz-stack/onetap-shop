@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import AppIcon from '../Components/AppIcon';
+import NotificationBell from '../Components/NotificationBell';
 import ThemeToggle from '../Components/ThemeToggle';
 import UserMenu from '../Components/UserMenu';
 import Toast from '../Components/ui/Toast';
@@ -24,6 +25,7 @@ export default function RiderLayout({ title, children }) {
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <NotificationBell />
             <UserMenu compact />
           </div>
         </div>

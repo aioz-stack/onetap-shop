@@ -66,7 +66,7 @@ class Riders extends LogisticsController
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate($this->rules() + [
+        $validated = $request->validate(self::rules() + [
             'username' => ['required', 'string', 'min:3', 'max:50', 'alpha_dash', 'unique:users,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'regex:/^(\+63|0)9\d{9}$/', 'unique:users,phone'],
@@ -139,7 +139,7 @@ class Riders extends LogisticsController
     {
         $this->authorizeRider($request, $rider);
         $user = $rider->user;
-        $validated = $request->validate($this->rules() + [
+        $validated = $request->validate(self::rules() + [
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user)],
             'phone' => ['required', 'string', 'regex:/^(\+63|0)9\d{9}$/', Rule::unique('users', 'phone')->ignore($user)],
             'password' => ['nullable', Password::min(8)->letters()->numbers()],
@@ -171,7 +171,7 @@ class Riders extends LogisticsController
     /**
      * @return array<string, mixed>
      */
-    private function rules(): array
+    public static function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:255'],

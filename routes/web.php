@@ -8,6 +8,7 @@ use App\Http\Controllers\CRUD;
 use App\Http\Controllers\Customer;
 use App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Logistics;
+use App\Http\Controllers\NotificationsController;
 use App\Http\Controllers\Rider;
 use App\Http\Controllers\Seller;
 use Illuminate\Support\Facades\Route;
@@ -111,6 +112,11 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post("products/{product}/{$action}", [Admin\Products::class, $action])->name("products.{$action}");
         }
 
+        Route::get('vouchers', [Admin\Vouchers::class, 'index'])->name('vouchers.index');
+        Route::post('vouchers', [Admin\Vouchers::class, 'store'])->name('vouchers.store');
+        Route::put('vouchers/{voucher}', [Admin\Vouchers::class, 'update'])->name('vouchers.update');
+        Route::delete('vouchers/{voucher}', [Admin\Vouchers::class, 'destroy'])->name('vouchers.destroy');
+
         Route::get('categories', [Admin\Categories::class, 'index'])->name('categories.index');
         Route::post('categories', [Admin\Categories::class, 'store'])->name('categories.store');
         Route::put('categories/{category}', [Admin\Categories::class, 'update'])->name('categories.update');
@@ -168,6 +174,11 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Starter user CRUD, kept for admins until Phase 3 replaces it with full user management.
     Route::resource('crud', CRUD::class)->names('crud')->middleware('role:admin');
+
+    // In-app inbox for every role (header bell).
+    Route::get('/notifications/feed', [NotificationsController::class, 'feed'])->name('notifications.feed');
+    Route::get('/notifications/{id}/open', [NotificationsController::class, 'open'])->name('notifications.open');
+    Route::post('/notifications/read-all', [NotificationsController::class, 'readAll'])->name('notifications.read-all');
 
     // Re-enter password before sensitive pages (Laravel's password.confirm middleware).
     Route::get('/confirm-password', [ConfirmPassword::class, 'show'])->name('password.confirm');

@@ -90,6 +90,7 @@ class CheckoutService
             $shippingTotal = '0.00';
             $discountTotal = '0.00';
             $sequence = 1;
+            $usedVoucherIds = [];
             $unitPrices = $items->mapWithKeys(fn (CartItem $item) => [$item->id => $this->pricing->unitPrice($item->variation->product, $variations[$item->product_variation_id]->price)]);
 
             foreach ($items->groupBy(fn (CartItem $item) => $item->variation->product->shop_id) as $shopItems) {
@@ -105,8 +106,20 @@ class CheckoutService
                 $applied = $code !== '' ? $this->vouchers->quote($code, $shop, $subtotal, $quote['fee'], $customer, "vouchers.{$shop->id}") : null;
                 $discount = $applied['discount'] ?? '0.00';
 
-                // Commission is charged on what the customer actually pays for the items; the seller funds the voucher.
-                $commission = bcdiv(bcmul(bcsub($subtotal, $applied['item_discount'] ?? '0.00', 2), $rate, 4), '100', 2);
+                // A voucher counts once per order, even when the same platform code is typed for several shops.
+                if ($applied && in_array($applied['voucher']->id, $usedVoucherIds, true)) {
+                    throw ValidationException::withMessages(["vouchers.{$shop->id}" => "Voucher {$applied['voucher']->code} can only be used on one shop per order."]);
+                }
+
+                if ($applied) {
+                    $usedVoucherIds[] = $applied['voucher']->id;
+                }
+
+                // Shop vouchers are funded by the seller: commission is charged on the discounted item total and the
+                // discount comes out of the seller's earning. Platform vouchers (no shop) are funded by Onetap: the
+                // seller is paid as if there were no voucher, and the cost is booked at completion.
+                $platformFunded = $applied && $applied['voucher']->shop_id === null;
+                $commission = bcdiv(bcmul(bcsub($subtotal, $platformFunded ? '0.00' : ($applied['item_discount'] ?? '0.00'), 2), $rate, 4), '100', 2);
 
                 $sellerOrder = $order->sellerOrders()->create([
                     'shop_id' => $shopItems->first()->variation->product->shop_id,
@@ -119,7 +132,7 @@ class CheckoutService
                     'total' => bcsub(bcadd($subtotal, $quote['fee'], 2), $discount, 2),
                     'commission_rate' => $rate,
                     'commission_amount' => $commission,
-                    'seller_earning' => bcsub(bcsub($subtotal, $commission, 2), $discount, 2),
+                    'seller_earning' => bcsub(bcsub($subtotal, $commission, 2), $platformFunded ? '0.00' : $discount, 2),
                 ]);
 
                 foreach ($shopItems as $item) {

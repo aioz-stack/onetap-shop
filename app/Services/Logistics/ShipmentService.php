@@ -7,6 +7,7 @@ use App\Enums\ShipmentStatus;
 use App\Models\SellerOrder;
 use App\Models\Shipment;
 use App\Models\User;
+use App\Services\Communication\Notifier;
 use App\Services\Ordering\ShippingFeeService;
 use Illuminate\Support\Str;
 
@@ -57,6 +58,8 @@ class ShipmentService
             'note' => $area ? "Routed to {$area->logisticsPartner->name}" : 'No partner covers this address yet; waiting for assignment',
             'user_id' => $actor?->id,
         ]);
+
+        $area ? app(Notifier::class)->shipmentRouted($shipment, $area->logisticsPartner) : app(Notifier::class)->shipmentUnrouted($shipment);
 
         return $shipment;
     }

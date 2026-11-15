@@ -161,7 +161,7 @@ erDiagram
 | Table | Key columns |
 | --- | --- |
 | commissions | seller_order_id FK uniq, rate, base_amount, amount |
-| transactions | user_id FK null, shop_id FK null, logistics_partner_id FK null, type [sale_earning/commission/delivery_fee/withdrawal/refund/adjustment/cod_collection/remittance], direction [credit/debit], amount, balance_after, reference_type, reference_id, description — append-only ledger |
+| transactions | user_id FK null, shop_id FK null, logistics_partner_id FK null, type [sale_earning/commission/delivery_fee/withdrawal/refund/adjustment/cod_collection/remittance/platform_voucher], direction [credit/debit], amount, balance_after, reference_type, reference_id, description — append-only ledger |
 | seller_balances | shop_id FK uniq, pending_balance, available_balance, total_earned, total_withdrawn |
 | bank_accounts | shop_id FK, bank_name, account_name, account_number (encrypted cast), is_default |
 | withdrawals | shop_id FK, bank_account_id FK, amount, fee, status [pending/approved/paid/rejected], processed_by FK, processed_at, reference |
@@ -198,3 +198,9 @@ erDiagram
 | 2026-11-16 | `2026_11_16_120000_create_rider_shifts_and_rider_pay` | rider_shifts table; logistics_partners.rider_fee_per_delivery decimal(14,2) default 0 |
 
 The first 15 are in batch 1 on `onetap-shop` (63 tables). Additions from the table list above: `promotion_products`, `voucher_redemptions`, `shop_auto_replies`, `banners`, and `bank_accounts.account_last4` (the full number is stored with an encrypted cast).
+
+Phase 8 needed no migration. New values only:
+
+- `transactions.type` = `platform_voucher` (debit), written when an order that used an Onetap voucher completes.
+- `system_settings` rows `notifications.notify_unrouted_shipments` (default 1) and `notifications.email_users` (default 0), added with the settings seeder (`firstOrCreate`, existing rows untouched).
+- `notifications` (Laravel database channel) rows now carry a `type` key in `data`.

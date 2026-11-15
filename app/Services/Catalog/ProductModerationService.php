@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductViolation;
 use App\Models\User;
 use App\Services\Administration\AuditLogger;
+use App\Services\Communication\Notifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -90,6 +91,18 @@ class ProductModerationService
         $from = $product->status->value;
         $product->forceFill(array_merge($extra, ['status' => $to]))->save();
         $this->auditLogger->log($action, $product, ['status' => $from], ['status' => $to->value] + $extra, $admin);
+
+        $outcome = match ($to) {
+            ProductStatus::Live => 'approved',
+            ProductStatus::Rejected => 'rejected',
+            ProductStatus::Violation => 'violation',
+            ProductStatus::Unpublished => 'unpublished',
+            default => null,
+        };
+
+        if ($outcome) {
+            app(Notifier::class)->productReviewed($product, $outcome, $extra['rejection_reason'] ?? null);
+        }
 
         return $product;
     }

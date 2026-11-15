@@ -15,6 +15,7 @@ use App\Models\Shipment;
 use App\Models\User;
 use App\Notifications\DeliveryAssigned;
 use App\Services\Administration\AuditLogger;
+use App\Services\Communication\Notifier;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -50,7 +51,12 @@ class DispatchService
 
             // Reassignment: the old rider's job is cancelled and the parcel goes back to the queue first.
             if (in_array($status, [ShipmentStatus::Assigned, ShipmentStatus::Accepted], true)) {
+                $previous = $shipment->assignments()->whereIn('status', [AssignmentStatus::Assigned, AssignmentStatus::Accepted])->latest('id')->first()?->rider?->user;
                 $this->statuses->transition($shipment, ShipmentStatus::PendingPickup, $actor, 'Reassigned');
+
+                if ($previous && ! $previous->is($rider->user)) {
+                    app(Notifier::class)->riderUnassigned($shipment, $previous);
+                }
             } else {
                 $shipment->assignments()->whereIn('status', [AssignmentStatus::Assigned, AssignmentStatus::Accepted])->update(['status' => AssignmentStatus::Cancelled]);
             }
@@ -86,7 +92,11 @@ class DispatchService
             throw ValidationException::withMessages(['status' => 'Only shipments waiting for pickup can be unassigned.']);
         }
 
-        return $this->statuses->transition($shipment, ShipmentStatus::PendingPickup, $actor, "Unassigned: {$reason}");
+        $rider = $shipment->assignments()->whereIn('status', [AssignmentStatus::Assigned, AssignmentStatus::Accepted])->latest('id')->first()?->rider?->user;
+        $updated = $this->statuses->transition($shipment, ShipmentStatus::PendingPickup, $actor, "Unassigned: {$reason}");
+        app(Notifier::class)->riderUnassigned($updated, $rider);
+
+        return $updated;
     }
 
     /**
@@ -107,6 +117,7 @@ class DispatchService
             $shipment->forceFill(['logistics_partner_id' => $partner->id])->save();
             $shipment->statusHistories()->create(['from_status' => $shipment->status->value, 'to_status' => $shipment->status->value, 'note' => "Routed to {$partner->name}", 'user_id' => $admin->id]);
             $this->auditLogger->log('shipment.routed', $shipment, ['logistics_partner_id' => $from], ['logistics_partner_id' => $partner->id], $admin);
+            app(Notifier::class)->shipmentRouted($shipment, $partner);
 
             return $shipment;
         });

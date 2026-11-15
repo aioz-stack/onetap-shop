@@ -41,7 +41,7 @@ class Marketing extends SellerController
                 'ends_at' => $voucher->ends_at?->format('Y-m-d\TH:i'),
                 'is_active' => $voucher->is_active,
                 'label' => $this->vouchers->describe($voucher),
-                'state' => $this->state($voucher->is_active, $voucher->starts_at, $voucher->ends_at, $voucher->usage_limit !== null && $voucher->used_count >= $voucher->usage_limit),
+                'state' => self::state($voucher->is_active, $voucher->starts_at, $voucher->ends_at, $voucher->usage_limit !== null && $voucher->used_count >= $voucher->usage_limit),
             ]),
             'types' => VoucherType::options(),
         ]);
@@ -49,7 +49,7 @@ class Marketing extends SellerController
 
     public function storeVoucher(Request $request): RedirectResponse
     {
-        $voucher = $this->shop($request)->vouchers()->create($this->validatedVoucher($request));
+        $voucher = $this->shop($request)->vouchers()->create(self::validatedVoucher($request));
         $this->auditLogger->log('voucher.created', $voucher, newValues: ['code' => $voucher->code]);
 
         return back()->with('success', "Voucher {$voucher->code} created.");
@@ -58,7 +58,7 @@ class Marketing extends SellerController
     public function updateVoucher(Request $request, Voucher $voucher): RedirectResponse
     {
         abort_unless($voucher->shop_id === $this->shop($request)->id, 404);
-        $voucher->update($this->validatedVoucher($request, $voucher));
+        $voucher->update(self::validatedVoucher($request, $voucher));
 
         return back()->with('success', 'Voucher updated.');
     }
@@ -92,7 +92,7 @@ class Marketing extends SellerController
                 'is_active' => $promotion->is_active,
                 'product_ids' => $promotion->products->pluck('id'),
                 'products' => $promotion->products->pluck('name'),
-                'state' => $this->state($promotion->is_active, $promotion->starts_at, $promotion->ends_at),
+                'state' => self::state($promotion->is_active, $promotion->starts_at, $promotion->ends_at),
             ]),
             'products' => $shop->products()->whereIn('status', ['live', 'under_review', 'unpublished', 'draft'])->orderBy('name')->get(['id', 'name']),
         ]);
@@ -146,7 +146,7 @@ class Marketing extends SellerController
     /**
      * @return array<string, mixed>
      */
-    private function validatedVoucher(Request $request, ?Voucher $voucher = null): array
+    public static function validatedVoucher(Request $request, ?Voucher $voucher = null): array
     {
         $request->merge(['code' => strtoupper(trim((string) $request->input('code')))]);
 
@@ -188,7 +188,7 @@ class Marketing extends SellerController
         ], ['product_ids.required' => 'Choose at least one product.', 'product_ids.*.exists' => 'Choose products from your shop.']);
     }
 
-    private function state(bool $active, $startsAt, $endsAt, bool $exhausted = false): string
+    public static function state(bool $active, $startsAt, $endsAt, bool $exhausted = false): string
     {
         return match (true) {
             ! $active => 'inactive',

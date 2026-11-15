@@ -105,13 +105,13 @@ class Storefront
                 ->orWhereHas('shop', fn ($shops) => $shops->where('name', 'like', "%{$term}%"))))
             ->when($category, fn ($query) => $query->whereIn('product_category_id', ProductCategory::query()->where('id', $category->id)->orWhere('parent_id', $category->id)->select('id')))
             ->when(filled($filters['shop'] ?? null), fn ($query) => $query->whereHas('shop', fn ($shops) => $shops->where('slug', $filters['shop'])))
-            ->when(is_numeric($filters['min'] ?? null), fn ($query) => $query->whereHas('variations', fn ($variations) => $variations->where('is_active', true)->where('price', '>=', $filters['min'])))
-            ->when(is_numeric($filters['max'] ?? null), fn ($query) => $query->whereHas('variations', fn ($variations) => $variations->where('is_active', true)->where('price', '<=', $filters['max'])))
+            ->when(is_numeric($filters['min'] ?? null), fn ($query) => $query->whereRaw(self::effectivePriceSql().' >= cast(? as decimal(14,2))', [...self::effectivePriceBindings(), (float) $filters['min']]))
+            ->when(is_numeric($filters['max'] ?? null), fn ($query) => $query->whereRaw(self::effectivePriceSql().' <= cast(? as decimal(14,2))', [...self::effectivePriceBindings(), (float) $filters['max']]))
             ->when($filters['in_stock'] ?? false, fn ($query) => $query->whereHas('variations', fn ($variations) => $variations->where('is_active', true)->whereColumn('stock', '>', 'reserved')));
 
         match ($sort) {
-            'price_asc' => $query->orderBy('min_price'),
-            'price_desc' => $query->orderByDesc('min_price'),
+            'price_asc' => $query->orderByRaw(self::effectivePriceSql().' asc', self::effectivePriceBindings()),
+            'price_desc' => $query->orderByRaw(self::effectivePriceSql().' desc', self::effectivePriceBindings()),
             'best_selling' => $query->orderByDesc('sold_count'),
             'top_rated' => $query->orderByDesc('rating_avg')->orderByDesc('rating_count'),
             'relevance' => $query->orderByRaw('case when products.name like ? then 0 else 1 end', ["%{$term}%"])->orderByDesc('sold_count'),
@@ -132,5 +132,28 @@ class Storefront
             ->with(['children' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order')])
             ->orderBy('sort_order')
             ->get(['id', 'name', 'slug', 'icon', 'parent_id']);
+    }
+
+    /**
+     * The "from" price a shopper sees: the cheapest active variation after the product's best running
+     * promotion. Used for price filters and sorting so they match the prices on the cards.
+     */
+    public static function effectivePriceSql(): string
+    {
+        return '((select min(pv.price) from product_variations pv where pv.product_id = products.id and pv.is_active = 1)'
+            .' * (100 - coalesce((select max(pr.discount_percent) from promotions pr'
+            .' inner join promotion_products pp on pp.promotion_id = pr.id'
+            .' where pp.product_id = products.id and pr.is_active = 1'
+            .' and (pr.starts_at is null or pr.starts_at <= ?) and (pr.ends_at is null or pr.ends_at >= ?)), 0)) / 100)';
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function effectivePriceBindings(): array
+    {
+        $now = now()->toDateTimeString();
+
+        return [$now, $now];
     }
 }

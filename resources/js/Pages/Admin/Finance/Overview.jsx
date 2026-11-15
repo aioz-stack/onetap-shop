@@ -34,7 +34,7 @@ function MonthlyChart({ monthly }) {
 
 export default function Overview({ allTime, thisMonth, monthly }) {
   const cards = [
-    { label: 'Marketplace revenue', value: formatMoney(allTime.commission), icon: icon('wallet'), tone: 'brand', hint: `${formatMoney(thisMonth.commission)} this month` },
+    { label: 'Marketplace revenue', value: formatMoney(allTime.netRevenue), icon: icon('wallet'), tone: 'brand', hint: `Commission ${formatMoney(allTime.commission)} − platform vouchers ${formatMoney(allTime.platformVouchers)} · ${formatMoney(thisMonth.netRevenue)} this month` },
     { label: 'Completed sales (GMV)', value: formatMoney(allTime.gmv), icon: icon('chart'), tone: 'success', hint: `${formatMoney(thisMonth.gmv)} this month` },
     { label: 'Seller earnings', value: formatMoney(allTime.sellerEarnings), icon: icon('store'), tone: 'warning' },
     { label: 'Logistics fees', value: formatMoney(allTime.logisticsFees), icon: icon('truck'), tone: 'orange' },

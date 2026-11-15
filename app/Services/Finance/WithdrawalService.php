@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Withdrawal;
 use App\Services\Administration\AuditLogger;
 use App\Services\Administration\SettingsService;
+use App\Services\Communication\Notifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -53,6 +54,7 @@ class WithdrawalService
             ]);
 
             $this->auditLogger->log('withdrawal.requested', $withdrawal, newValues: ['amount' => $amount], actor: $actor);
+            app(Notifier::class)->withdrawalRequested($withdrawal->setRelation('shop', $shop));
 
             return $withdrawal;
         });
@@ -109,7 +111,10 @@ class WithdrawalService
             $locked->forceFill(array_merge($extra, ['status' => $to, 'processed_by' => $actor->id, 'processed_at' => now()]))->save();
             $this->auditLogger->log('withdrawal.'.$to->value, $locked, ['status' => $old], ['status' => $to->value] + $extra, $actor);
 
-            return $locked->load('shop', 'bankAccount');
+            $locked->load('shop', 'bankAccount');
+            app(Notifier::class)->withdrawalUpdated($locked);
+
+            return $locked;
         });
     }
 }

@@ -93,7 +93,7 @@ export default function Checkout({ groups, summary, addresses, paymentMethods, c
                 >
                   <TextInput
                     aria-label={`Voucher code for ${group.shop.name}`}
-                    placeholder="Shop voucher code"
+                    placeholder="Voucher code (shop or Onetap)"
                     className="h-9 uppercase"
                     value={codes[group.shop.id] ?? ''}
                     onChange={(event) => setCodes({ ...codes, [group.shop.id]: event.target.value.toUpperCase() })}

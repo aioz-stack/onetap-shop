@@ -21,6 +21,7 @@ export const adminNav = [
     items: [
       { label: 'Products', href: '/admin/products', icon: 'box', badge: 'products' },
       { label: 'Categories', href: '/admin/categories', icon: 'layers' },
+      { label: 'Platform Vouchers', href: '/admin/vouchers', icon: 'tag' },
     ],
   },
   {

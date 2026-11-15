@@ -1,6 +1,6 @@
 # Onetap Marketplace — Development Log
 
-**Current phase:** Phase 7 (Rider Panel) is complete. Phase 8 (System Integration) is next.
+**Current phase:** Phase 8 (System Integration) is complete. Phase 9 (Testing and Finalization) is next.
 
 ## Setup
 
@@ -459,12 +459,54 @@ If you only need the server, run `npm run build` once and then `php artisan serv
   - All six rider pages fit at 375px with no client errors.
 - The full Customer → Seller → Logistics → Rider → COD → Finance workflow now runs on real MySQL records.
 
+## Phase 8 — System Integration — done (2026-11-16)
+
+- **Notifications across every panel** (`Communication\Notifier` + one generic `Alert` notification with a `type`, title, body and in-app link):
+  - Services only say what happened; the notifier sends after the transaction commits, and a mail failure never breaks the business action.
+  - **Admin team** (each switchable in Settings → Notifications; also emailed to the team address when one is set): new seller applications, refund requests, withdrawal requests, and shipments no partner covers (new toggle).
+  - **Sellers:** application approved/rejected, product approved/rejected/violation/unpublished, refund requested, order cancelled by the customer, order completed (with the earning), withdrawal approved/paid/rejected.
+  - **Customers:** rider on the way (with the cash to prepare), "we missed you" after a failed attempt, refund approved/declined. The old generic "order refunded" message was removed so customers get one refund alert with the amount.
+  - **Logistics partners:** new pickup request (covered address or admin routing), rider declined a job, failed delivery attempt, remittance to count.
+  - **Riders:** assignment link now opens the job, job removed (unassign or reassignment), remittance confirmed/disputed.
+  - Suspended accounts get nothing. New setting **"Also email users"** (off by default) mails users their alerts too; mail uses the `.env` mailer (`log` locally).
+- **Inbox for every role:**
+  - A header bell with an unread badge and the latest 10 alerts for the admin, seller and logistics panels and the rider app.
+  - Opening an alert marks it read and only follows links inside the app; "Mark all read" clears the rest.
+  - Routes: `/notifications/feed`, `/notifications/{id}/open`, `/notifications/read-all`. API: `/api/v1/notifications`.
+- **API completed for the other panels** (same services and validation as the web panels; isolation by shop/partner):
+  - Seller: dashboard, products (list, show, create and update with photos, submit/unpublish/republish, delete), stock, orders (list by tab, detail, accept/ready/cancel).
+  - Logistics: dashboard, shipments (list, detail, assign, unassign), riders (list, detail, add, edit, approve/suspend).
+  - Customer: refund requests, refund list, item reviews.
+  - The API now has 60 routes; see API_DOCUMENTATION.md.
+- **Platform vouchers** (admin → Products → Platform Vouchers, sharing one voucher manager with the Seller Center):
+  - Valid in any shop's voucher box, once per order (typing the same code for two shops is refused).
+  - **Onetap funds them:** the seller is paid as if there were no voucher and commission is charged on the full item total. On completion a `platform_voucher` debit is written to the ledger, and Finance shows **net revenue = commission − platform vouchers** (overview card, monthly report and CSV).
+  - Shop vouchers keep their rule: the shop funds them.
+- **Promotion-aware price sorting and filters:** price sort and the min/max price filter use the "from" price after the best running promotion, in SQL (works on MySQL and SQLite), so they match the prices on the cards.
+- Small fixes: the checkout voucher box now says "Voucher code (shop or Onetap)"; a timing-sensitive login-throttle test (60 vs 59 seconds) no longer flakes.
+
+## Phase 8 testing results (2026-11-16)
+
+- `php artisan test`: **291 passed, 2940 assertions** (20 new in `tests/Feature/Phase8`). They cover:
+  - every notification route above, with the admin toggles, the team email and "email users";
+  - suspended users skipped;
+  - the bell feed, open (read + safe redirect, other users' alerts 404), read all, and the shared `counts.notifications`;
+  - the notifications API;
+  - seller product CRUD with photo upload, stock, and order processing through to a shipment;
+  - logistics dispatch and rider management with partner isolation;
+  - customer refunds and reviews;
+  - a parcel driven by partner and rider tokens keeping seller-order status in step;
+  - platform voucher admin CRUD and scoping, funding math (₱400 order, ₱50 voucher: commission ₱20, seller ₱380), once-per-order, the ledger entry and net revenue;
+  - promotion-aware sort and filters, including an expired promotion.
+- Browser check on MySQL:
+  1. As admin, created platform voucher `ONETAP20` (₱20 off) from the new screen.
+  2. As customer Juan, bought a Buko Pie (₱350) with it: paid ₱389.00. MySQL shows commission ₱17.50 (5% of the full ₱350) and seller earning ₱332.50, so the seller wasn't charged for the voucher.
+  3. As seller Maria, the bell showed "2 unread"; opening the new-order alert went to the order and marked it read. Accepted it and marked it ready for pickup.
+  4. As Onetap Express, the bell showed "New pickup request" for `OTX261115770UXWB`. The dropdown fits at 375px with no overflow.
 ## Known issues / notes
 
 - The migrations reached MySQL before the explicit `php artisan migrate` step: that step reported "Nothing to migrate" (all 15 already in batch 1). Nothing was dropped and the database was empty beforehand.
 - **Staff accounts (admin, logistics, rider) cannot shop.** The cart, checkout and My Account require the customer role; sellers have it. Staff see an explanation on product pages.
-- Platform-wide (admin) vouchers are supported by the data model (`shop_id` null) but there is no admin screen for them yet.
-- Search sorting by price uses list prices; promotion prices are applied to what's displayed and charged, not to the sort order.
 - Seller shop names can't be changed by the seller (contact support); admin editing of shop names isn't built yet.
 - Refund requests are text-only; photo evidence is not collected yet.
 - Chat uses 5-second polling, not websockets.
@@ -472,7 +514,9 @@ If you only need the server, run `npm run build` once and then `php artisan serv
 - Each logistics partner has a single operator account; there are no sub-users or dispatcher roles yet.
 - Storefront product images use `loading="lazy"`, so a browser tab that isn't on screen doesn't draw them (that's why the hidden test pane showed 0 loaded). This is expected behavior.
 - **The `general.timezone` setting is stored but not applied.** The app clock is still `config('app.timezone')` = UTC (for example, CSV file names use UTC). Switching the app timezone changes how existing timestamps are read, so it needs a deliberate decision.
-- Notification settings (admin email and event toggles) are stored, but no emails are sent until notifications are built in Phase 8.
+- Emails are written to the log locally (`MAIL_MAILER=log`). Real delivery needs SMTP or a mail service in `.env`.
+- Alerts are delivered when the page loads or the bell opens; there is no live push (websockets) yet, same as chat polling.
+- A platform voucher can make net revenue negative on an order (the voucher is larger than the commission). This is intended and shown in Finance.
 - The branding color setting is for emails and the future mobile apps; the web theme uses the built-in palette.
 - Refund requests, withdrawal requests and verification uploads have admin screens tested with factory data; the dev database only has the records created during the browser checks.
 - Demo passwords are weak by design and the seeder is limited to local and testing environments.
@@ -480,6 +524,7 @@ If you only need the server, run `npm run build` once and then `php artisan serv
   - `qa_customer` (Phase 2).
   - Order `OT261115I73DWN`: the bakery seller order went through the whole Phase 7 flow and is Completed (delivered with a generated test photo, ₱419.00 collected, remitted and confirmed, earnings posted); the hardware order is cancelled.
   - Rider Pedro Reyes has an open shift from the browser check (sign out from the rider Home tab).
+  - Phase 8: platform voucher `ONETAP20` and order `OT261115DU7JXW` (Buko Pie, ready for pickup as `OTX261115770UXWB`, not yet assigned to a rider).
   - A chat thread with Santos Home Bakery (my test message twice, the greeting, and the seller's reply).
   - "Cheese Pandesal (10 pcs)", under review, from the upload test.
   - The "Ube Week" promotion (20% off Ube Ensaymada, no end date) and the `BAKERY30` voucher.
@@ -489,10 +534,11 @@ If you only need the server, run `npm run build` once and then `php artisan serv
 - Rider pay is a flat amount per delivered parcel. Pickups, returns and failed attempts are not paid, and there is no payout screen for rider pay yet (it is shown as earnings only).
 - A rider can return a parcel to the shop after a failed attempt from the app; the logistics operator can also do it from the shipment page.
 
-## Next tasks (Phase 8: System Integration)
+## Next tasks (Phase 9: Testing and Finalization)
 
-- Connect the remaining notifications: email and in-app events from the notification settings (order placed, shipped, delivered, refunds, withdrawals, remittance disputes).
-- Seller and logistics API endpoints still listed as planned in API_DOCUMENTATION.md (`/seller/*`, `/logistics/*`, reviews, refunds).
-- Decide the timezone question (apply `general.timezone` to the app clock) so "today" totals match Philippine time.
-- Admin screen for platform-wide vouchers; promotion-aware price sorting.
-- Then Phase 9: run the full workflow across every panel again, and do permission, security and responsive passes.
+- Decide the timezone question (apply `general.timezone` to the app clock) so "today" totals match Philippine time. This needs your decision.
+- Run the full workflow again across every panel on a fresh set of orders, including a refund and a withdrawal payout.
+- Permission sweep: every route by every role, and API tokens by role.
+- Security pass: rate limits, upload validation, private file access, audit log coverage, dependency audit.
+- Responsive pass on every page at phone, tablet and desktop widths.
+- Clean up the dev test data listed above if you want a tidy demo database (needs your approval; nothing is deleted automatically).

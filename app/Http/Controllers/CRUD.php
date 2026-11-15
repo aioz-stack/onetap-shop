@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Enums\RoleName;
 use App\Models\User;
+use App\Services\Administration\AuditLogger;
+use App\Services\Identity\UserAccountService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -16,6 +19,18 @@ class CRUD extends Controller
     /**
      * List the users (paginated).
      */
+    public function __construct(private UserAccountService $accounts, private AuditLogger $auditLogger) {}
+
+    /**
+     * Sellers keep their customer role (they shop too), matching Admin → Users.
+     *
+     * @return list<RoleName>
+     */
+    private static function rolesFor(RoleName $role): array
+    {
+        return $role === RoleName::Seller ? [RoleName::Customer, RoleName::Seller] : [$role];
+    }
+
     public function index(): Response
     {
         // Paginate the users so the page stays fast when the table grows.
@@ -47,17 +62,16 @@ class CRUD extends Controller
             'username' => ['required', 'string', 'max:255', 'unique:users,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'role' => ['required', Rule::enum(RoleName::class)],
-            'password' => ['required', 'string', 'min:6'],
-            'profile_picture' => ['nullable', 'image', 'max:2048'],
+            'password' => ['required', 'string', Password::min(8)->letters()->numbers()],
+            'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
         if ($request->hasFile('profile_picture')) {
             $validated['profile_picture'] = $request->file('profile_picture')->store('profile-pictures', 'public');
         }
 
-        // Roles live in user_roles; assignRole() also keeps the legacy column in sync.
-        $user = User::create(collect($validated)->except('role')->all());
-        $user->assignRole(RoleName::from($validated['role']));
+        // Same rules as Admin → Users: audited, with profiles created for the role.
+        $this->accounts->create(collect($validated)->except('role')->all(), self::rolesFor(RoleName::from($validated['role'])), $request->user());
 
         return redirect()->route('crud.index')->with('success', 'User created successfully.');
     }
@@ -92,14 +106,9 @@ class CRUD extends Controller
             'username' => ['required', 'string', 'max:255', 'unique:users,username,'.$crud->id],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$crud->id],
             'role' => ['required', Rule::enum(RoleName::class)],
-            'password' => ['nullable', 'string', 'min:6'],
-            'profile_picture' => ['nullable', 'image', 'max:2048'],
+            'password' => ['nullable', 'string', Password::min(8)->letters()->numbers()],
+            'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
-
-        // Only replace the password when the admin types a new one.
-        if (blank($validated['password'] ?? null)) {
-            unset($validated['password']);
-        }
 
         if ($request->hasFile('profile_picture')) {
             if ($crud->profile_picture) {
@@ -109,8 +118,8 @@ class CRUD extends Controller
             $validated['profile_picture'] = $request->file('profile_picture')->store('profile-pictures', 'public');
         }
 
-        $crud->update(collect($validated)->except('role')->all());
-        $crud->assignRole(RoleName::from($validated['role']));
+        // Replaces the user's roles (a seller keeps the customer role) and refuses to demote yourself.
+        $this->accounts->update($crud, collect($validated)->except('role')->all(), self::rolesFor(RoleName::from($validated['role'])), $request->user());
 
         return redirect()->route('crud.index')->with('success', 'User updated successfully.');
     }
@@ -118,8 +127,14 @@ class CRUD extends Controller
     /**
      * Remove the given user.
      */
-    public function destroy(User $crud): RedirectResponse
+    public function destroy(Request $request, User $crud): RedirectResponse
     {
+        if ($crud->is($request->user()) || $crud->hasRole(RoleName::Admin)) {
+            return back()->with('error', 'Administrators cannot be deleted here. Remove the admin role first, or suspend the account from Admin → Users.');
+        }
+
+        $this->auditLogger->log('user.deleted', $crud, ['username' => $crud->username, 'roles' => $crud->roleNames()], actor: $request->user());
+
         if ($crud->profile_picture) {
             Storage::disk('public')->delete($crud->profile_picture);
         }

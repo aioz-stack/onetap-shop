@@ -42,6 +42,15 @@ class EarningsService
                 ]);
             }
 
+            // Onetap funds platform vouchers: book the cost against marketplace revenue.
+            $order->loadMissing('voucher');
+
+            if ($order->voucher && $order->voucher->shop_id === null && bccomp((string) $order->discount, '0', 2) > 0) {
+                $this->ledger->record(TransactionType::PlatformVoucher, TransactionDirection::Debit, (string) $order->discount, $order, [
+                    'description' => "Platform voucher {$order->voucher->code} on {$order->reference}",
+                ]);
+            }
+
             if (bccomp($order->seller_earning, '0', 2) > 0) {
                 $balance = $this->ledger->creditPending($order->shop, $order->seller_earning);
                 $this->ledger->record(TransactionType::SaleEarning, TransactionDirection::Credit, $order->seller_earning, $order, [

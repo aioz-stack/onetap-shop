@@ -79,10 +79,10 @@ class Finance extends Controller
 
         return response()->streamDownload(function () use ($rows) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Month', 'GMV', 'Commission', 'Seller earnings', 'Logistics fees', 'Refunds', 'Paid out to sellers']);
+            fputcsv($out, ['Month', 'GMV', 'Commission', 'Platform vouchers', 'Net revenue', 'Seller earnings', 'Logistics fees', 'Refunds', 'Paid out to sellers']);
 
             foreach ($rows as $row) {
-                fputcsv($out, [$row['month'], $row['gmv'], $row['commission'], $row['sellerEarnings'], $row['logisticsFees'], $row['refunds'], $row['paidOut']]);
+                fputcsv($out, [$row['month'], $row['gmv'], $row['commission'], $row['platformVouchers'], $row['netRevenue'], $row['sellerEarnings'], $row['logisticsFees'], $row['refunds'], $row['paidOut']]);
             }
 
             fclose($out);

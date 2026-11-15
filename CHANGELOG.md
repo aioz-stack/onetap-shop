@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+### 2026-11-16 — Phase 8 (System Integration)
+
+**Added**
+- `Communication\Notifier` and a generic `Alert` notification: cross-panel alerts for admins, sellers, customers, logistics partners and riders, sent after commit.
+- Settings: "Shipments no logistics partner covers" and "Also email users" toggles; the admin team email now receives the enabled admin alerts.
+- Notification bell (unread badge, latest alerts, mark all read) for the admin, seller and logistics panels and the rider app; `/notifications/*` web routes and `/api/v1/notifications`.
+- Seller API (dashboard, products with photos, stock, orders), logistics API (dashboard, shipments, assign/unassign, riders) and customer refund/review endpoints.
+- Admin Platform Vouchers screen; Onetap-funded vouchers with a `platform_voucher` ledger entry and net revenue in Finance (overview, monthly report, CSV).
+- 20 tests in `tests/Feature/Phase8`.
+
+**Changed**
+- Price sort and price filters use promotion prices.
+- Platform vouchers can be used once per order and no longer reduce the seller's earning.
+- The rider assignment alert links to the job; the generic "order refunded" alert was replaced by the refund decision alert.
+- The voucher manager is shared by the Seller Center and the admin panel.
+- The checkout voucher box mentions Onetap codes.
+
+**Fixed**
+- The login-throttle test no longer fails when the countdown ticks from 60 to 59 seconds.
+
 ### 2026-11-16 — Phase 7 (Rider Panel)
 
 **Added**

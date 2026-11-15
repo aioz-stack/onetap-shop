@@ -11,6 +11,7 @@ use App\Models\RiderProfile;
 use App\Models\RiderRemittance;
 use App\Models\User;
 use App\Services\Administration\AuditLogger;
+use App\Services\Communication\Notifier;
 use App\Support\Money;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -58,6 +59,7 @@ class RemittanceService
 
             RiderCollection::query()->whereKey($collections->pluck('id'))->update(['rider_remittance_id' => $remittance->id]);
             $this->auditLogger->log('remittance.submitted', $remittance, newValues: ['expected' => $expected, 'remitted' => $remitted], actor: $actor ?? $rider->user);
+            app(Notifier::class)->remittanceSubmitted($remittance);
 
             return $remittance;
         });
@@ -98,6 +100,7 @@ class RemittanceService
             }
 
             $this->auditLogger->log($matches ? 'remittance.confirmed' : 'remittance.disputed', $locked, newValues: ['received' => $received, 'discrepancy' => $discrepancy], actor: $actor);
+            app(Notifier::class)->remittanceReviewed($locked);
 
             return $locked;
         });

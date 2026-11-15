@@ -8,6 +8,7 @@ use App\Enums\ShipmentStatus;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\Administration\AuditLogger;
+use App\Services\Communication\Notifier;
 use App\Services\Ordering\OrderStatusService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -65,6 +66,7 @@ class ShipmentStatusService
             $this->syncSellerOrder($locked, $next, $actor, $note);
             $this->closeAssignments($locked, $next);
             $this->auditLogger->log('shipment.status_changed', $locked, ['status' => $current->value], ['status' => $next->value, 'note' => $note], $actor);
+            app(Notifier::class)->shipmentChanged($locked, $next, $note);
 
             return $locked;
         });

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UserAddress;
 use App\Models\VerificationDocument;
 use App\Services\Administration\AuditLogger;
+use App\Services\Communication\Notifier;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -170,6 +171,7 @@ class AccountService
             $shop ? $shop->update($shopData) : $profile->shop()->create($shopData + ['slug' => $this->uniqueShopSlug($data['shop_name'])]);
 
             $this->auditLogger->log('seller.applied', $profile, newValues: ['business_name' => $data['business_name']], actor: $user);
+            app(Notifier::class)->sellerApplied($profile);
 
             return $profile->refresh();
         });

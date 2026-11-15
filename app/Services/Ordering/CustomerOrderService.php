@@ -7,6 +7,7 @@ use App\Enums\SellerOrderStatus;
 use App\Models\Refund;
 use App\Models\SellerOrder;
 use App\Models\User;
+use App\Services\Communication\Notifier;
 use App\Services\Finance\EarningsService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -31,7 +32,10 @@ class CustomerOrderService
             throw ValidationException::withMessages(['status' => 'This order is already being prepared. Contact the shop or request a return after delivery.']);
         }
 
-        return $this->orderStatus->transition($order, SellerOrderStatus::Cancelled, $customer, "Cancelled by customer: {$reason}");
+        $cancelled = $this->orderStatus->transition($order, SellerOrderStatus::Cancelled, $customer, "Cancelled by customer: {$reason}");
+        app(Notifier::class)->orderCancelledByCustomer($cancelled, $reason);
+
+        return $cancelled;
     }
 
     /**
@@ -48,6 +52,7 @@ class CustomerOrderService
         return DB::transaction(function () use ($order, $customer) {
             $completed = $this->orderStatus->transition($order, SellerOrderStatus::Completed, $customer, 'Received by customer');
             $this->earnings->postCompletion($completed);
+            app(Notifier::class)->orderCompleted($completed);
 
             return $completed;
         });
@@ -77,13 +82,16 @@ class CustomerOrderService
         return DB::transaction(function () use ($order, $customer, $data, $amount) {
             $this->orderStatus->transition($order, SellerOrderStatus::ReturnRequested, $customer, $data['reason']);
 
-            return $order->refunds()->create([
+            $refund = $order->refunds()->create([
                 'user_id' => $customer->id,
                 'reason' => $data['reason'],
                 'details' => $data['details'] ?? null,
                 'amount' => number_format((float) $amount, 2, '.', ''),
                 'status' => RefundStatus::Requested,
             ]);
+            app(Notifier::class)->refundRequested($refund->setRelation('sellerOrder', $order));
+
+            return $refund;
         });
     }
 

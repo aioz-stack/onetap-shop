@@ -10,6 +10,7 @@ use App\Models\Refund;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Administration\AuditLogger;
+use App\Services\Communication\Notifier;
 use App\Services\Finance\LedgerService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -62,6 +63,7 @@ class RefundService
 
             $refund->forceFill(['status' => RefundStatus::Refunded, 'resolved_by' => $actor->id, 'resolved_at' => now()])->save();
             $this->auditLogger->log('refund.approved', $refund, newValues: ['restock' => $restock, 'note' => $note], actor: $actor);
+            app(Notifier::class)->refundReviewed($refund);
 
             return $refund;
         });
@@ -77,6 +79,7 @@ class RefundService
 
             $refund->forceFill(['status' => RefundStatus::Rejected, 'resolved_by' => $actor->id, 'resolved_at' => now(), 'details' => trim(($refund->details ?? '')."\n\nRejected: {$reason}")])->save();
             $this->auditLogger->log('refund.rejected', $refund, newValues: ['reason' => $reason], actor: $actor);
+            app(Notifier::class)->refundReviewed($refund, $reason);
 
             return $refund;
         });

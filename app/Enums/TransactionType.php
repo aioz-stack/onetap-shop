@@ -14,4 +14,5 @@ enum TransactionType: string
     case Adjustment = 'adjustment';
     case CodCollection = 'cod_collection';
     case Remittance = 'remittance';
+    case PlatformVoucher = 'platform_voucher';
 }

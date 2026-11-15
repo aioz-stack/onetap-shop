@@ -28,7 +28,7 @@ class DeliveryAssigned extends Notification
         return [
             'title' => 'New delivery assigned',
             'body' => "Pick up {$shipment->tracking_number} at {$pickup}. Collect ₱".number_format((float) $shipment->cod_amount, 2).' on delivery.',
-            'url' => '/rider',
+            'url' => "/rider/deliveries/{$shipment->id}",
             'assignment_id' => $this->assignment->id,
         ];
     }

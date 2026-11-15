@@ -116,6 +116,7 @@ storefront layout (top header + search + category nav + footer). Rider layout is
 | `Logistics\DispatchService` / `RiderService` / `CoverageService` | Rider assignment and reassignment, admin routing to a partner, rider lifecycle and performance, service areas |
 | `Finance\RemittanceService` | Rider COD remittances: submit, then confirm (ledger) or dispute |
 | `Logistics\RiderShiftService` / `DeliveryService` | Rider shifts and availability; the rider-side delivery flow (own jobs only), proof of delivery on the private disk, COD collection and marking orders paid, daily rider earnings |
+| `Communication\Notifier` | Every cross-panel alert (who hears about what), sent after commit; admin toggles, team email and optional user email |
 | `Identity\UserAccountService` | Staff accounts, role sync, suspension (revokes tokens and sessions), verification review |
 | `Administration\SettingsSchema` / `SettingsService` | Typed, validated, cached system settings |
 
@@ -162,6 +163,7 @@ Money (all `DECIMAL(14,2)`, currency PHP):
 1. Checkout: stock reserved, `orders` + `seller_orders` created, payment row `pending` (COD).
 2. Delivered: the rider submits proof (photo on the private disk, recipient, GPS) and the cash collected → `delivery_proofs` + `rider_collections` (a mismatch is flagged as a discrepancy). When the cash covers the seller order it gets `paid_at`; once every active seller order is paid, the order and its payment row become `paid`.
 3. Rider remits daily → `rider_remittances` confirmed by logistics; discrepancies flagged.
+   Vouchers: a shop voucher is funded by the seller (commission on the discounted items, discount taken from the earning). A platform voucher is funded by Onetap (seller paid in full; a `platform_voucher` debit is booked at completion; net revenue = commission − platform vouchers).
 4. Completed: ledger `transactions` posted — seller earning (subtotal − commission − voucher share),
    admin commission, logistics delivery fee. Seller `pending_balance → available_balance` after the
    hold period (setting).

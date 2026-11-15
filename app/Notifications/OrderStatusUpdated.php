@@ -22,7 +22,7 @@ class OrderStatusUpdated extends Notification
             SellerOrderStatus::Delivered => 'was delivered. Tap “Order received” to confirm',
             SellerOrderStatus::Completed => 'is complete. Thanks for shopping local!',
             SellerOrderStatus::Cancelled => 'was cancelled',
-            SellerOrderStatus::Refunded => 'was refunded',
+
             default => null,
         };
     }

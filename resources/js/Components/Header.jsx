@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { IconClose, IconHamburger, IconMenuLines } from './Icons';
+import NotificationBell from './NotificationBell';
 import ThemeToggle from './ThemeToggle';
 import UserMenu from './UserMenu';
 
@@ -34,6 +35,7 @@ export default function Header({ sidebarToggle, onToggleSidebar, homeHref = '/da
 
         <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle />
+          <NotificationBell />
           <UserMenu />
         </div>
       </div>
