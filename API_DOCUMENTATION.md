@@ -46,6 +46,22 @@ Active top-level categories with active `children[]`, ordered by `sort_order`.
 | POST | /orders/{id}/cancel | `reason`; only while Unpaid or Pending; releases stock |
 | POST | /orders/{id}/confirm-received | Delivered → Completed; posts commission and the seller's pending earning |
 
+### Rider ✅ (Bearer, rider role)
+
+Riders only see and act on their own assignments; anyone else's parcel returns `404`. Status changes and proof need an active rider on an open shift (`422` otherwise).
+
+| Method | Path | Body / query | Response |
+| --- | --- | --- | --- |
+| GET | /api/v1/rider/dashboard | — | `{ data: { availability, on_shift, partner, stats: { assigned, pendingPickups, todayDeliveries, completedToday, codToday, codUnremitted, earningsToday, ratePerDelivery, failedToday } } }` |
+| POST | /api/v1/rider/availability | `action`: `sign_in` \| `sign_out` \| `available` \| `unavailable` | `{ data: { availability, on_shift } }` |
+| GET | /api/v1/rider/assignments | `scope`: `open` (default) \| `history` | `{ data: [job], meta: { current_page, last_page, total } }`; job = id (shipment id), tracking_number, status, job_status, job_type, open, shop, pickup_area, recipient, dropoff_area, cod_amount, attempts |
+| GET | /api/v1/rider/deliveries/{shipment} | — | job + pickup/dropoff addresses, items, history, proof, collection, `next_steps`, `can_decline` |
+| POST | /api/v1/rider/deliveries/{shipment}/status | `status`: declined, accepted, arrived_at_pickup, picked_up, in_transit, out_for_delivery, failed_delivery, customer_unavailable, rescheduled, returned_to_seller; `note` (required for declined, failed, unavailable, returned); optional `lat`, `lng` | `{ data: { id, tracking_number, status } }`; 60/min |
+| POST | /api/v1/rider/deliveries/{shipment}/proof | multipart: `photo` (jpg/png/webp, ≤8 MB), `recipient_name`, optional `recipient_relation`, `amount_collected` (defaults to the COD due), `lat`, `lng`, `note` | `201` with the job detail; parcel must be out for delivery; 20/min |
+| GET | /api/v1/rider/deliveries/{shipment}/proof-photo | — | the image (private) |
+| GET | /api/v1/rider/cod | — | `{ data: { summary, collections, earnings (7 days), remittances } }` |
+| POST | /api/v1/rider/cod/remittances | `amount`, optional `notes` | `201` remittance `{ id, date, expected_amount, remitted_amount, discrepancy, status }`; 10/min |
+
 ## Planned
 
 - Base path: `/api/v1`
@@ -78,10 +94,5 @@ Active top-level categories with active `children[]`, ordered by `sort_order`.
 | GET | /logistics/shipments | logistics | Shipments by status |
 | POST | /logistics/shipments/{id}/assign | logistics | Assign rider |
 | GET/POST/PUT | /logistics/riders | logistics | Rider management |
-| GET | /rider/assignments | rider | Own assignments only |
-| POST | /rider/availability | rider | Available / unavailable |
-| POST | /rider/deliveries/{id}/status | rider | Status transition |
-| POST | /rider/deliveries/{id}/proof | rider | Photo + recipient + GPS |
-| POST | /rider/remittances | rider | Submit daily remittance |
 
 This table is updated as each endpoint is implemented and tested.

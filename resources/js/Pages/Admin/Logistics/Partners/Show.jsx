@@ -68,6 +68,7 @@ export default function Show({ partner, areas, riders, stats, statuses }) {
     contact_email: partner.contact_email ?? '',
     address: partner.address ?? '',
     base_delivery_fee: partner.base_delivery_fee,
+    rider_fee_per_delivery: partner.rider_fee_per_delivery,
     status: partner.status,
   });
   const [editingArea, setEditingArea] = useState(null);

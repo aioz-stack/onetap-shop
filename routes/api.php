@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\RiderController;
 use App\Http\Controllers\Api\V1\ShoppingController;
 use Illuminate\Support\Facades\Route;
 
@@ -49,5 +50,18 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:api')->group(function
         Route::get('orders/{order}', [ShoppingController::class, 'order'])->name('orders.show');
         Route::post('orders/{order}/cancel', [ShoppingController::class, 'cancelOrder'])->name('orders.cancel');
         Route::post('orders/{order}/confirm-received', [ShoppingController::class, 'confirmOrder'])->name('orders.confirm');
+    });
+
+    // Rider app: own assignments only.
+    Route::prefix('rider')->name('rider.')->middleware(['auth:sanctum', 'active', 'role:rider'])->group(function () {
+        Route::get('dashboard', [RiderController::class, 'dashboard'])->name('dashboard');
+        Route::post('availability', [RiderController::class, 'availability'])->name('availability');
+        Route::get('assignments', [RiderController::class, 'assignments'])->name('assignments.index');
+        Route::get('deliveries/{shipment}', [RiderController::class, 'show'])->name('deliveries.show');
+        Route::post('deliveries/{shipment}/status', [RiderController::class, 'status'])->middleware('throttle:60,1')->name('deliveries.status');
+        Route::post('deliveries/{shipment}/proof', [RiderController::class, 'proof'])->middleware('throttle:20,1')->name('deliveries.proof');
+        Route::get('deliveries/{shipment}/proof-photo', [RiderController::class, 'proofPhoto'])->name('deliveries.proof-photo');
+        Route::get('cod', [RiderController::class, 'cod'])->name('cod');
+        Route::post('cod/remittances', [RiderController::class, 'remit'])->middleware('throttle:10,1')->name('cod.remit');
     });
 });

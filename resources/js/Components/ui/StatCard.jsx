@@ -10,16 +10,16 @@ const tones = {
 /**
  * Dashboard KPI tile.
  */
-export default function StatCard({ label, value, hint, icon: Icon, tone = 'brand' }) {
+export default function StatCard({ label, value, hint, icon: Icon, tone = 'brand', compact = false }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+    <div className={`rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] ${compact ? 'p-4' : 'p-5'}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-          <p className="mt-2 truncate text-2xl font-bold text-gray-800 dark:text-white/90">{value}</p>
+          <p className={`mt-2 truncate font-bold text-gray-800 dark:text-white/90 ${compact ? 'text-xl' : 'text-2xl'}`}>{value}</p>
         </div>
         {Icon && (
-          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tones[tone]}`}>
+          <span className={`h-11 w-11 shrink-0 items-center justify-center rounded-xl ${compact ? 'hidden sm:flex' : 'flex'} ${tones[tone]}`}>
             <Icon className="h-5 w-5" />
           </span>
         )}

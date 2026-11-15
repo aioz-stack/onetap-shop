@@ -71,7 +71,7 @@ class LogisticsPartners extends Controller
         $shipments = fn () => $partner->shipments();
 
         return Inertia::render('Admin/Logistics/Partners/Show', [
-            'partner' => $partner->only(['id', 'name', 'code', 'contact_phone', 'contact_email', 'address', 'base_delivery_fee']) + [
+            'partner' => $partner->only(['id', 'name', 'code', 'contact_phone', 'contact_email', 'address', 'base_delivery_fee', 'rider_fee_per_delivery']) + [
                 'status' => $partner->status->value,
                 'owner' => $partner->owner?->only(['id', 'name', 'email', 'username']),
             ],
@@ -138,6 +138,7 @@ class LogisticsPartners extends Controller
             'contact_email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'base_delivery_fee' => ['required', 'numeric', 'min:0', 'max:10000'],
+            'rider_fee_per_delivery' => ['sometimes', 'required', 'numeric', 'min:0', 'max:10000'],
             'status' => ['required', Rule::enum(PartnerStatus::class)],
         ];
     }

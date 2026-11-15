@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+### 2026-11-16 — Phase 7 (Rider Panel)
+
+**Added**
+- Migration `2026_11_16_120000_create_rider_shifts_and_rider_pay`: a `rider_shifts` log and `logistics_partners.rider_fee_per_delivery`.
+- **`RiderShiftService`:** sign in/out of shifts, available/unavailable, and an on-shift check before any delivery update.
+- **`DeliveryService`:** rider-side delivery flow (decline, accept, step by step to out for delivery, failed attempts, try again, return to shop). `complete()` saves the private proof photo, recipient, GPS and COD collection (discrepancies flagged), then marks the parcel Delivered and the order paid when the cash covers it. Also computes daily earnings.
+- Rider app (mobile-first): Home with shift controls and today's numbers, Deliveries (tabs, search, job page with next-step buttons, call/maps links, camera proof form), COD (remit, collections, 7-day earnings, history) and Profile (contact number, password, shifts). Tab badges show new jobs and cash in hand.
+- Rider REST API: dashboard, availability, assignments, delivery detail, status, proof upload, proof photo, COD and remittances.
+- Private proof-photo routes for the rider, the owning logistics partner (shown on the shipment page with a GPS map link) and admins (linked from the admin order page).
+- Rider pay per delivery: editable by admins on the partner form and by operators on the Coverage page.
+- 30 tests in `tests/Feature/Phase7`.
+
+**Changed**
+- `StatCard` has a `compact` mode for two-up phone layouts.
+- The demo seeder gives Onetap Express a ₱35 rider fee.
+
 ### 2026-11-16 — Phase 6 (Logistics Panel)
 
 **Added**

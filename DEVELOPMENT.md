@@ -1,6 +1,6 @@
 # Onetap Marketplace — Development Log
 
-**Current phase:** Phase 6 (Logistics Panel) is complete. Phase 7 (Rider Panel) is next.
+**Current phase:** Phase 7 (Rider Panel) is complete. Phase 8 (System Integration) is next.
 
 ## Setup
 
@@ -402,6 +402,63 @@ If you only need the server, run `npm run build` once and then `php artisan serv
   - All 12 logistics pages render and fit at 375px with no client errors.
   - I didn't add a rider in the browser, to avoid more test logins in your database; the automated tests cover it.
 
+## Phase 7 — Rider Panel — done (2026-11-16)
+
+- **Migration** `2026_11_16_120000_create_rider_shifts_and_rider_pay` (incremental, nothing dropped):
+  - new `rider_shifts` table (shift log);
+  - `logistics_partners.rider_fee_per_delivery`, the partner's pay per delivered parcel. Admins set it on the partner form and operators set it on the Coverage page.
+- **`RiderShiftService`:**
+  - Sign in starts a shift and makes the rider available; signing in twice keeps one open shift.
+  - Sign out ends the shift and sets the rider offline.
+  - Available / unavailable can only be toggled while on shift.
+  - Riders must be active and on shift to update deliveries.
+- **`DeliveryService`** (all status changes go through `ShipmentStatusService`):
+  - One `update()` entry point for: decline (assigned jobs only; needs a reason; the parcel goes back to the dispatcher's queue and the job is marked declined), accept, arrived at pickup, picked up, in transit, out for delivery, failed delivery / customer unavailable (need a note; attempts counted), try again later (rescheduled → out for delivery) and return to shop (needs a reason).
+  - Riders cannot skip steps or mark a parcel delivered without proof.
+  - `complete()`: in one transaction it stores the proof photo on the private `local` disk, writes `delivery_proofs` (recipient, relation, GPS, timestamp) and `rider_collections`, then marks the parcel Delivered. Collected ≠ due is saved as a `discrepancy`.
+  - When the cash covers a seller order it gets `paid_at`. Once every active seller order of the order is paid, the order's `payment_status` and its pending `payments` rows become paid. Short cash leaves the order unpaid.
+  - Daily earnings = parcels delivered that day × the partner's rate.
+- **Isolation:** riders only see and act on their own assignments. Anyone else's parcel returns 404; a reassigned rider can still view their old job but no longer act on it.
+- **Rider app** (mobile-first; `RiderLayout` bottom tabs with badges for new jobs and cash in hand):
+  - **Home:** shift controls; assigned, pending pickups, to deliver, delivered today, COD today (plus amount still to remit), earned today; failed-attempt alert; up-next jobs.
+  - **Deliveries:**
+    - Tabs New / To pick up / To deliver / Issues / History, with tracking-number search.
+    - The job page has a progress bar, cash to collect, pickup and drop-off cards (call links, map directions), items, and tracking history.
+    - One primary next-step button, with secondary actions in a modal that asks for a note.
+    - The proof form has a camera capture (`capture="environment"`) with preview, recipient and relation, cash collected (warns on a mismatch), a note, and optional GPS. A hard timeout keeps the browser's location prompt from blocking updates.
+  - **COD:** collected today, cash in hand, awaiting confirmation, discrepancies; remit form (`RemittanceService::submit`), collection list, 7-day earnings, remittance history.
+  - **Profile:** partner, vehicle and status, pay rate, performance, contact number, password change, recent shifts.
+- **Proof photos** are streamed from private storage through authorized routes for the rider, the owning partner (`/logistics/shipments/{id}/proof-photo`, also shown on the shipment page with a GPS map link) and admins (`/admin/logistics/shipments/{id}/proof-photo`, linked from the admin order page).
+- **Rider API** (Sanctum, rider role): dashboard, availability, assignments (open / history), delivery detail, status, proof (multipart), proof photo, COD summary, remittances. See API_DOCUMENTATION.md.
+- `StatCard` gained a `compact` mode so money values fit two-up on phones.
+
+## Phase 7 testing results (2026-11-16)
+
+- `php artisan test`: **271 passed, 2713 assertions** (30 new in `tests/Feature/Phase7`). They cover:
+  - every rider page rendering, and other roles blocked;
+  - shift sign in/out/availability, and inactive riders blocked;
+  - updates refused off shift;
+  - the full flow writing proof (file on the private disk), collection, seller order Delivered and paid, order and payment paid, job completed, dashboard earnings ₱35;
+  - proof validation (photo required and must be an image, recipient required, out-for-delivery only);
+  - short cash flagged with the order left unpaid;
+  - skipped steps rejected;
+  - decline (reason required, back to queue; not after accepting);
+  - failed → try again later → delivered; failed → returned to shop (order Returned, no earnings);
+  - rider isolation and reassigned riders;
+  - proof photo access for rider/partner/admin, other partners and customers blocked;
+  - remit → partner confirm;
+  - rider pay set by the partner and the admin;
+  - profile phone and password;
+  - the API: the full delivery over tokens, isolation, role checks, validation.
+- Browser check on MySQL, end to end with the demo accounts:
+  1. As rider Pedro Reyes at 375px: signed in to a shift, then took `OTX261115E9ALWC4` through accept → arrived → picked up → in transit → out for delivery.
+  2. Delivered it with a generated test photo, recipient Juan Dela Cruz (Self) and ₱419.00 collected. The browser pane shares no location, so it saved with "No GPS", as designed.
+  3. MySQL then showed: shipment delivered; collection ₱419.00/₱419.00 collected; seller order delivered with `paid_at`; order and payment paid; job completed; photo in `storage/app/private/delivery-proofs/1/`. The photo loads on the rider job page and the logistics shipment page.
+  4. The rider remitted ₱419.00 from the COD tab; Onetap Express counted and confirmed it (remittance confirmed, collection remitted, ledger `remittance` ₱419.00).
+  5. As customer Juan: "Order received" completed the order, posting a seller earning of ₱342.00 (pending balance) and commission ₱18.00.
+  - All six rider pages fit at 375px with no client errors.
+- The full Customer → Seller → Logistics → Rider → COD → Finance workflow now runs on real MySQL records.
+
 ## Known issues / notes
 
 - The migrations reached MySQL before the explicit `php artisan migrate` step: that step reported "Nothing to migrate" (all 15 already in batch 1). Nothing was dropped and the database was empty beforehand.
@@ -411,30 +468,31 @@ If you only need the server, run `npm run build` once and then `php artisan serv
 - Seller shop names can't be changed by the seller (contact support); admin editing of shop names isn't built yet.
 - Refund requests are text-only; photo evidence is not collected yet.
 - Chat uses 5-second polling, not websockets.
-- Riders move parcels through the delivery flow from the Rider app in Phase 7. Until then, statuses after "Assigned" only change in tests, or through the logistics actions (reschedule, return).
 - Suspending a rider does not take back parcels they have already picked up; the operator handles those manually.
 - Each logistics partner has a single operator account; there are no sub-users or dispatcher roles yet.
 - Storefront product images use `loading="lazy"`, so a browser tab that isn't on screen doesn't draw them (that's why the hidden test pane showed 0 loaded). This is expected behavior.
 - **The `general.timezone` setting is stored but not applied.** The app clock is still `config('app.timezone')` = UTC (for example, CSV file names use UTC). Switching the app timezone changes how existing timestamps are read, so it needs a deliberate decision.
 - Notification settings (admin email and event toggles) are stored, but no emails are sent until notifications are built in Phase 8.
 - The branding color setting is for emails and the future mobile apps; the web theme uses the built-in palette.
-- Shipments, COD collections, remittances, refund requests, withdrawal requests and verification uploads are created by later phases (4–7). Their admin screens are built and tested with factory data, but they are empty on the real database until then.
-- The rider app's tabs (Deliveries, COD, Profile) are placeholders until Phase 7.
+- Refund requests, withdrawal requests and verification uploads have admin screens tested with factory data; the dev database only has the records created during the browser checks.
 - Demo passwords are weak by design and the seeder is limited to local and testing environments.
 - Dev database leftovers from the browser checks:
   - `qa_customer` (Phase 2).
-  - Order `OT261115I73DWN`: the bakery seller order is Ready for pickup, and shipment `OTX261115E9ALWC4` is assigned to rider Pedro Reyes, ready for the Phase 7 rider flow; the hardware order is cancelled.
+  - Order `OT261115I73DWN`: the bakery seller order went through the whole Phase 7 flow and is Completed (delivered with a generated test photo, ₱419.00 collected, remitted and confirmed, earnings posted); the hardware order is cancelled.
+  - Rider Pedro Reyes has an open shift from the browser check (sign out from the rider Home tab).
   - A chat thread with Santos Home Bakery (my test message twice, the greeting, and the seller's reply).
   - "Cheese Pandesal (10 pcs)", under review, from the upload test.
   - The "Ube Week" promotion (20% off Ube Ensaymada, no end date) and the `BAKERY30` voucher.
 
-## Next tasks (Phase 7: Rider Panel)
+- **Rider days follow the app clock (UTC).** "Today" for earnings and COD totals rolls over at 8:00 AM Philippine time until the timezone decision above is made.
+- Rider GPS is optional and best-effort; when the rider declines location access, deliveries are saved with "No GPS".
+- Rider pay is a flat amount per delivered parcel. Pickups, returns and failed attempts are not paid, and there is no payout screen for rider pay yet (it is shown as earnings only).
+- A rider can return a parcel to the shop after a failed attempt from the app; the logistics operator can also do it from the shipment page.
 
-- Mobile-first rider app:
-  - Dashboard: today's deliveries, assigned orders, completed, pending pickups, COD collection, daily earnings.
-  - Shift sign in and out; available or unavailable.
-- Delivery flow through `ShipmentStatusService`: accept/decline, arrived at pickup, picked up, in transit, out for delivery, delivered, plus failed delivery, customer unavailable, reschedule request and return to seller.
-- Proof of delivery: photo capture or upload (private disk), recipient name and relationship, timestamp, GPS with permission.
-- COD: record the collection (`rider_collections`; the payment becomes paid when the amount matches), daily totals, submit the remittance through `RemittanceService::submit`, remittance history, and discrepancies.
-- Strict isolation: a rider only sees and acts on their own assignments.
-- Rider API endpoints: `/api/v1/rider/assignments`, `/rider/deliveries/{id}/status`, `/rider/deliveries/{id}/proof`.
+## Next tasks (Phase 8: System Integration)
+
+- Connect the remaining notifications: email and in-app events from the notification settings (order placed, shipped, delivered, refunds, withdrawals, remittance disputes).
+- Seller and logistics API endpoints still listed as planned in API_DOCUMENTATION.md (`/seller/*`, `/logistics/*`, reviews, refunds).
+- Decide the timezone question (apply `general.timezone` to the app clock) so "today" totals match Philippine time.
+- Admin screen for platform-wide vouchers; promotion-aware price sorting.
+- Then Phase 9: run the full workflow across every panel again, and do permission, security and responsive passes.

@@ -66,7 +66,22 @@ export default function Show({ shipment, riders }) {
                 items={[
                   shipment.proof && { label: 'Received by', value: `${shipment.proof.recipient_name}${shipment.proof.recipient_relation ? ` (${shipment.proof.recipient_relation})` : ''}` },
                   shipment.proof && { label: 'Delivered', value: formatDateTime(shipment.proof.delivered_at) },
-                  shipment.proof && { label: 'GPS', value: shipment.proof.has_location ? 'Recorded' : 'Not shared' },
+                  shipment.proof && {
+                    label: 'GPS',
+                    value: shipment.proof.has_location ? (
+                      <a href={`https://www.google.com/maps?q=${shipment.proof.lat},${shipment.proof.lng}`} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline dark:text-brand-400">
+                        {Number(shipment.proof.lat).toFixed(5)}, {Number(shipment.proof.lng).toFixed(5)}
+                      </a>
+                    ) : 'Not shared',
+                  },
+                  shipment.proof && {
+                    label: 'Photo',
+                    value: (
+                      <a href={shipment.proof.photo_url} target="_blank" rel="noreferrer">
+                        <img src={shipment.proof.photo_url} alt="Proof of delivery" className="h-32 w-auto rounded-lg border border-gray-200 object-cover dark:border-gray-800" />
+                      </a>
+                    ),
+                  },
                   shipment.collection && { label: 'Cash collected', value: `${formatMoney(shipment.collection.amount_collected)} of ${formatMoney(shipment.collection.amount_due)}` },
                   shipment.collection && { label: 'Remittance', value: <StatusBadge status={shipment.collection.status} /> },
                 ]}

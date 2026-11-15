@@ -148,13 +148,14 @@ erDiagram
 ### Logistics
 | Table | Key columns |
 | --- | --- |
-| logistics_partners | user_id FK (owner/admin account), name, code uniq, contact_phone, contact_email, base_delivery_fee, status |
+| logistics_partners | user_id FK (owner/admin account), name, code uniq, contact_phone, contact_email, base_delivery_fee, rider_fee_per_delivery (pay per delivered parcel), status |
 | service_areas | logistics_partner_id FK, region, province, city, barangay null (null = whole city), delivery_fee override, is_active; uniq(partner, city, barangay) |
 | shipments | tracking_number uniq, seller_order_id FK uniq, logistics_partner_id FK, status, pickup address snapshot, dropoff address snapshot, cod_amount, delivery_fee, attempts, scheduled_at, picked_up_at, delivered_at |
 | shipment_items | shipment_id FK, order_item_id FK, quantity |
 | shipment_status_histories | shipment_id FK, from_status, to_status, note, lat, lng, user_id FK |
 | delivery_assignments | shipment_id FK, rider_profile_id FK, type [pickup/delivery/return], status [assigned/accepted/declined/completed/cancelled], assigned_by FK, accepted_at, completed_at |
 | delivery_proofs | shipment_id FK uniq, rider_profile_id FK, photo_path (private), recipient_name, recipient_relation, signature_path null, lat, lng, delivered_at |
+| rider_shifts | rider_profile_id FK cascade, started_at, ended_at null (open shift); index(rider_profile_id, started_at) |
 
 ### Finance
 | Table | Key columns |
@@ -194,5 +195,6 @@ erDiagram
 
 | 2026-11-16 | `2026_11_16_100000_add_earnings_released_at_to_seller_orders` | seller_orders.earnings_released_at + index(status, earnings_released_at), batch 2 |
 | 2026-11-16 | `2026_11_16_110000_add_voucher_id_to_seller_orders` | seller_orders.voucher_id (FK vouchers, null on delete), batch 3 |
+| 2026-11-16 | `2026_11_16_120000_create_rider_shifts_and_rider_pay` | rider_shifts table; logistics_partners.rider_fee_per_delivery decimal(14,2) default 0 |
 
 The first 15 are in batch 1 on `onetap-shop` (63 tables). Additions from the table list above: `promotion_products`, `voucher_redemptions`, `shop_auto_replies`, `banners`, and `bank_accounts.account_last4` (the full number is stored with an encrypted cast).

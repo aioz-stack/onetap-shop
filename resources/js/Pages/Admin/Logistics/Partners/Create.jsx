@@ -11,6 +11,7 @@ export default function Create({ statuses }) {
     contact_email: '',
     address: '',
     base_delivery_fee: '59.00',
+    rider_fee_per_delivery: '35.00',
     status: 'active',
     owner_name: '',
     owner_username: '',

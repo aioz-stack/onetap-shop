@@ -20,6 +20,7 @@ export default function PartnerFields({ form, statuses }) {
       {text('contact_email', 'Contact email', { type: 'email' })}
       <div className="sm:col-span-2">{text('address', 'Office address')}</div>
       {text('base_delivery_fee', 'Base delivery fee (₱)', { type: 'number', min: 0, step: '0.01' }, true)}
+      {text('rider_fee_per_delivery', 'Rider pay per delivery (₱)', { type: 'number', min: 0, step: '0.01' }, true)}
       <FormField label="Status" required error={errors.status}>
         {(id) => <Select id={id} value={data.status} options={statuses} onChange={(event) => setData('status', event.target.value)} />}
       </FormField>

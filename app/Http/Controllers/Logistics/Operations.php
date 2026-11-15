@@ -9,6 +9,7 @@ use App\Models\RiderRemittance;
 use App\Models\ServiceArea;
 use App\Models\Shipment;
 use App\Models\ShipmentStatusHistory;
+use App\Services\Administration\AuditLogger;
 use App\Services\Finance\RemittanceService;
 use App\Services\Logistics\CoverageService;
 use App\Support\Money;
@@ -31,9 +32,23 @@ class Operations extends LogisticsController
         $partner = $this->partner($request);
 
         return Inertia::render('Logistics/Coverage', [
-            'partner' => $partner->only(['id', 'name', 'base_delivery_fee']),
+            'partner' => $partner->only(['id', 'name', 'base_delivery_fee', 'rider_fee_per_delivery']),
             'areas' => $partner->serviceAreas()->orderBy('city')->orderBy('barangay')->get()->map->only(['id', 'region', 'province', 'city', 'barangay', 'delivery_fee', 'is_active']),
         ]);
+    }
+
+    /**
+     * What the partner pays its riders for each completed delivery (shown in the rider app as daily earnings).
+     */
+    public function updateRiderPay(Request $request): RedirectResponse
+    {
+        $partner = $this->partner($request);
+        $validated = $request->validate(['rider_fee_per_delivery' => ['required', 'numeric', 'min:0', 'max:10000']]);
+        $old = $partner->rider_fee_per_delivery;
+        $partner->forceFill(['rider_fee_per_delivery' => $validated['rider_fee_per_delivery']])->save();
+        app(AuditLogger::class)->log('logistics.rider_pay_updated', $partner, ['rider_fee_per_delivery' => $old], ['rider_fee_per_delivery' => $partner->rider_fee_per_delivery], $request->user());
+
+        return back()->with('success', 'Rider pay per delivery updated.');
     }
 
     public function storeArea(Request $request): RedirectResponse

@@ -31,6 +31,27 @@ function AreaForm({ area, baseFee, onClose }) {
   );
 }
 
+function RiderPay({ partner }) {
+  const form = useForm({ rider_fee_per_delivery: partner.rider_fee_per_delivery ?? '0.00' });
+
+  return (
+    <Card className="mt-6" title="Rider pay" description="Paid to your rider for every parcel they deliver. Riders see it as their daily earnings.">
+      <form
+        className="flex flex-wrap items-end gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          form.put('/logistics/rider-pay', { preserveScroll: true });
+        }}
+      >
+        <FormField label="Pay per delivery (₱)" error={form.errors.rider_fee_per_delivery} className="w-full sm:w-56">
+          {(id) => <TextInput id={id} type="number" min="0" step="0.01" value={form.data.rider_fee_per_delivery} error={form.errors.rider_fee_per_delivery} onChange={(event) => form.setData('rider_fee_per_delivery', event.target.value)} />}
+        </FormField>
+        <Button type="submit" loading={form.processing}>Save</Button>
+      </form>
+    </Card>
+  );
+}
+
 export default function Coverage({ partner, areas }) {
   const [editing, setEditing] = useState(null);
   const [removing, setRemoving] = useState(null);
@@ -52,6 +73,7 @@ export default function Coverage({ partner, areas }) {
           ]}
         />
       </Card>
+      <RiderPay partner={partner} />
       {editing && <AreaForm area={editing} baseFee={partner.base_delivery_fee} onClose={() => setEditing(null)} />}
       <ConfirmDialog open={Boolean(removing)} onClose={() => setRemoving(null)} onConfirm={() => router.delete(`/logistics/coverage/${removing.id}`, { preserveScroll: true, onFinish: () => setRemoving(null) })} title="Remove this area?" message="New orders there will no longer be routed to you. Shipments already assigned are not affected." confirmLabel="Remove" />
     </LogisticsLayout>

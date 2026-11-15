@@ -7,10 +7,12 @@ use App\Models\RiderProfile;
 use App\Models\Shipment;
 use App\Services\Logistics\DispatchService;
 use App\Services\Logistics\ShipmentStatusService;
+use App\Support\ProofPhoto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class Shipments extends LogisticsController
 {
@@ -81,6 +83,9 @@ class Shipments extends LogisticsController
                     'recipient_relation' => $shipment->proof->recipient_relation,
                     'delivered_at' => $shipment->proof->delivered_at?->toIso8601String(),
                     'has_location' => $shipment->proof->lat !== null,
+                    'lat' => $shipment->proof->lat,
+                    'lng' => $shipment->proof->lng,
+                    'photo_url' => route('logistics.shipments.proof-photo', $shipment),
                 ] : null,
                 'collection' => $shipment->collection ? $shipment->collection->only(['amount_due', 'amount_collected']) + ['status' => $shipment->collection->status->value] : null,
                 'can' => [
@@ -172,6 +177,13 @@ class Shipments extends LogisticsController
         return $this->dispatch->availableRiders($this->partner($request))
             ->map(fn (RiderProfile $rider) => ['value' => $rider->id, 'label' => "{$rider->user->name} · {$rider->availability->label()} · {$rider->open_jobs} open"])
             ->all();
+    }
+
+    public function proofPhoto(Request $request, Shipment $shipment): StreamedResponse
+    {
+        $this->authorizeShipment($request, $shipment);
+
+        return ProofPhoto::response($shipment);
     }
 
     private function authorizeShipment(Request $request, Shipment $shipment): void

@@ -116,9 +116,9 @@ export const logisticsNav = [
 
 export const riderTabs = [
   { label: 'Home', href: '/rider', icon: 'home', exact: true },
-  { label: 'Deliveries', icon: 'truck' },
-  { label: 'COD', icon: 'cash' },
-  { label: 'Profile', icon: 'user' },
+  { label: 'Deliveries', href: '/rider/deliveries', icon: 'truck', badge: 'newJobs' },
+  { label: 'COD', href: '/rider/cod', icon: 'cash', badge: 'cashInHand' },
+  { label: 'Profile', href: '/rider/profile', icon: 'user' },
 ];
 
 export function isActivePath(currentUrl, item) {

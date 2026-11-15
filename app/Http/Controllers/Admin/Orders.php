@@ -75,6 +75,7 @@ class Orders extends Controller
             'items',
             'statusHistories.user:id,name',
             'shipment.logisticsPartner:id,name',
+            'shipment.proof',
             'shipment.assignments.rider.user:id,name',
             'refunds',
         ]);
@@ -121,6 +122,12 @@ class Orders extends Controller
                     'rider' => $order->shipment->assignments->sortByDesc('id')->first()?->rider?->user?->name,
                     'delivery_fee' => $order->shipment->delivery_fee,
                     'cod_amount' => $order->shipment->cod_amount,
+                    'proof' => $order->shipment->proof ? [
+                        'recipient_name' => $order->shipment->proof->recipient_name,
+                        'recipient_relation' => $order->shipment->proof->recipient_relation,
+                        'delivered_at' => $order->shipment->proof->delivered_at?->toIso8601String(),
+                        'photo_url' => route('admin.shipments.proof-photo', $order->shipment),
+                    ] : null,
                 ] : null,
                 'refunds' => $order->refunds->map(fn ($refund) => $refund->only(['id', 'reason', 'amount']) + ['status' => $refund->status->value]),
             ],

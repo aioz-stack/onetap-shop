@@ -69,6 +69,7 @@ class DemoAccountsSeeder extends Seeder
             'contact_phone' => '0281234567',
             'contact_email' => 'logistics@onetap.test',
             'base_delivery_fee' => 59,
+            'rider_fee_per_delivery' => 35,
             'status' => PartnerStatus::Active,
         ]);
         $partner->serviceAreas()->firstOrCreate(

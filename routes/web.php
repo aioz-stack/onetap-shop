@@ -142,6 +142,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
             Route::get('shipments', [Admin\Shipments::class, 'index'])->name('shipments.index');
             Route::post('shipments/{shipment}/route', [Admin\Shipments::class, 'route'])->name('shipments.route');
+            Route::get('shipments/{shipment}/proof-photo', [Admin\Shipments::class, 'proofPhoto'])->name('shipments.proof-photo');
             Route::get('cod', [Admin\Cod::class, 'index'])->name('cod.index');
         });
 
@@ -235,6 +236,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         Route::get('shipments', [Logistics\Shipments::class, 'index'])->name('shipments.index');
         Route::get('shipments/{shipment}', [Logistics\Shipments::class, 'show'])->name('shipments.show');
+        Route::get('shipments/{shipment}/proof-photo', [Logistics\Shipments::class, 'proofPhoto'])->name('shipments.proof-photo');
         Route::post('shipments/{shipment}/assign', [Logistics\Shipments::class, 'assign'])->name('shipments.assign');
         Route::post('shipments/{shipment}/unassign', [Logistics\Shipments::class, 'unassign'])->name('shipments.unassign');
         Route::post('shipments/{shipment}/reschedule', [Logistics\Shipments::class, 'reschedule'])->name('shipments.reschedule');
@@ -250,6 +252,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('riders/{rider}/suspend', [Logistics\Riders::class, 'suspend'])->name('riders.suspend');
 
         Route::get('coverage', [Logistics\Operations::class, 'coverage'])->name('coverage');
+        Route::put('rider-pay', [Logistics\Operations::class, 'updateRiderPay'])->name('rider-pay.update');
         Route::post('coverage', [Logistics\Operations::class, 'storeArea'])->name('coverage.store');
         Route::put('coverage/{area}', [Logistics\Operations::class, 'updateArea'])->name('coverage.update');
         Route::delete('coverage/{area}', [Logistics\Operations::class, 'destroyArea'])->name('coverage.destroy');
@@ -263,6 +266,23 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::prefix('rider')->name('rider.')->middleware('role:rider')->group(function () {
         Route::get('/', [Rider\Dashboard::class, 'index'])->name('dashboard');
+
+        Route::post('shift/sign-in', [Rider\Shift::class, 'signIn'])->name('shift.sign-in');
+        Route::post('shift/sign-out', [Rider\Shift::class, 'signOut'])->name('shift.sign-out');
+        Route::post('shift/availability', [Rider\Shift::class, 'availability'])->name('shift.availability');
+
+        Route::get('deliveries', [Rider\Deliveries::class, 'index'])->name('deliveries.index');
+        Route::get('deliveries/{shipment}', [Rider\Deliveries::class, 'show'])->name('deliveries.show');
+        Route::post('deliveries/{shipment}/status', [Rider\Deliveries::class, 'status'])->middleware('throttle:60,1')->name('deliveries.status');
+        Route::post('deliveries/{shipment}/deliver', [Rider\Deliveries::class, 'deliver'])->middleware('throttle:20,1')->name('deliveries.deliver');
+        Route::get('deliveries/{shipment}/proof-photo', [Rider\Deliveries::class, 'proofPhoto'])->name('deliveries.proof-photo');
+
+        Route::get('cod', [Rider\Cod::class, 'index'])->name('cod');
+        Route::post('cod/remit', [Rider\Cod::class, 'remit'])->middleware('throttle:10,1')->name('cod.remit');
+
+        Route::get('profile', [Rider\Profile::class, 'show'])->name('profile');
+        Route::put('profile', [Rider\Profile::class, 'update'])->name('profile.update');
+        Route::put('profile/password', [Rider\Profile::class, 'password'])->name('profile.password');
     });
 });
 

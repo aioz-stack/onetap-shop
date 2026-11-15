@@ -99,6 +99,7 @@ export default function Show({ order }) {
                   { label: 'Status', value: <StatusBadge status={order.shipment.status} /> },
                   { label: 'Partner / rider', value: `${order.shipment.partner ?? '—'} / ${order.shipment.rider ?? 'unassigned'}` },
                   { label: 'COD to collect', value: formatMoney(order.shipment.cod_amount) },
+                  order.shipment.proof && { label: 'Proof of delivery', value: <a href={order.shipment.proof.photo_url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline dark:text-brand-400">Photo · received by {order.shipment.proof.recipient_name}</a> },
                 ]}
               />
             ) : (

@@ -7,10 +7,12 @@ use App\Http\Controllers\Controller;
 use App\Models\LogisticsPartner;
 use App\Models\Shipment;
 use App\Services\Logistics\DispatchService;
+use App\Support\ProofPhoto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Read-only pickup and shipment monitoring across every logistics partner.
@@ -90,5 +92,13 @@ class Shipments extends Controller
         app(DispatchService::class)->routeToPartner($shipment, $partner, $request->user());
 
         return back()->with('success', "{$shipment->tracking_number} routed to {$partner->name}.");
+    }
+
+    /**
+     * Proof-of-delivery photo, streamed from private storage.
+     */
+    public function proofPhoto(Shipment $shipment): StreamedResponse
+    {
+        return ProofPhoto::response($shipment);
     }
 }

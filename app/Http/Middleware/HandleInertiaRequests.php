@@ -85,6 +85,11 @@ class HandleInertiaRequests extends Middleware
                 'pendingRiders' => $partner->riders()->where('status', 'pending')->count(),
                 'remittances' => $partner->remittances()->where('status', 'submitted')->count(),
             ] : null,
+            // Rider app tab badges.
+            'riderCounts' => fn () => $user && $request->is('rider*') && ($rider = $user->riderProfile) ? [
+                'newJobs' => $rider->assignments()->where('status', 'assigned')->count(),
+                'cashInHand' => $rider->collections()->whereNull('rider_remittance_id')->count(),
+            ] : null,
             // Seller Center sidebar badges.
             'sellerCounts' => fn () => $user && $request->is('seller*') && ($shopId = $user->sellerProfile?->shop?->id) ? [
                 'toShip' => SellerOrder::query()->where('shop_id', $shopId)->whereIn('status', ['pending', 'processing'])->count(),

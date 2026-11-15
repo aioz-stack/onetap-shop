@@ -28,10 +28,10 @@ Legend: ⬜ not started · 🟨 in progress · ✅ implemented **and tested**
 | Logistics — Shipments | Incoming, pickup requests, assign, track all statuses, returns | 6 | ✅ |
 | Logistics — Coverage | Barangay/city service areas, fees | 6 | ✅ |
 | Logistics — Finance | Daily COD, rider remittances, delivery fees, earnings, reports | 6 | ✅ |
-| Rider — Dashboard | Today's deliveries, assigned, completed, pickups, COD, earnings | 7 | ⬜ |
-| Rider — Availability | Sign in/out, available/unavailable | 7 | ⬜ |
-| Rider — Deliveries | Full status flow + failure statuses | 7 | ⬜ |
-| Rider — Proof of Delivery | Photo capture/upload, recipient, timestamp, GPS | 7 | ⬜ |
-| Rider — COD | Collection, daily remittance, history, discrepancies | 7 | ⬜ |
-| API v1 | Endpoints in API_DOCUMENTATION.md (auth, catalog, customer shopping incl. vouchers done) | 2–8 | 🟨 |
-| End-to-end workflow | Order → seller → logistics → rider → delivered → COD → finance | 8–9 | ⬜ |
+| Rider — Dashboard | Today's deliveries, assigned, completed, pickups, COD, earnings | 7 | ✅ |
+| Rider — Availability | Sign in/out, available/unavailable | 7 | ✅ |
+| Rider — Deliveries | Full status flow + failure statuses | 7 | ✅ |
+| Rider — Proof of Delivery | Photo capture/upload, recipient, timestamp, GPS | 7 | ✅ |
+| Rider — COD | Collection, daily remittance, history, discrepancies | 7 | ✅ |
+| API v1 | Endpoints in API_DOCUMENTATION.md (auth, catalog, customer shopping incl. vouchers, rider app done) | 2–8 | 🟨 |
+| End-to-end workflow | Order → seller → logistics → rider → delivered → COD → finance (runs on MySQL since Phase 7; full re-test in Phase 9) | 8–9 | 🟨 |
