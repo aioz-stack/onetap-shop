@@ -65,7 +65,7 @@ class Orders extends Controller
             'items.product' => fn ($query) => $query->withTrashed()->with('primaryImage'),
             'items.review',
             'statusHistories',
-            'shipment',
+            'shipment.statusHistories',
             'refunds',
         ]);
 

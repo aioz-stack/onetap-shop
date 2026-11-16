@@ -6,6 +6,7 @@ use App\Enums\RefundStatus;
 use App\Enums\SellerOrderStatus;
 use App\Models\SellerOrder;
 use App\Services\Ordering\CustomerOrderService;
+use App\Support\OrderTimeline;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -56,12 +57,8 @@ class CustomerOrderResource extends JsonResource
                 'reviewed' => $item->relationLoaded('review') ? (bool) $item->review : null,
             ])),
             'address' => $this->when($this->order?->relationLoaded('address'), fn () => $this->order->address?->only(['recipient_name', 'phone', 'street', 'barangay', 'city', 'province', 'region', 'postal_code'])),
-            'timeline' => $this->whenLoaded('statusHistories', fn () => $this->statusHistories->sortBy('id')->values()->map(fn ($history) => [
-                'status' => $history->to_status,
-                'label' => SellerOrderStatus::tryFrom($history->to_status)?->label() ?? $history->to_status,
-                'note' => $history->note,
-                'at' => $history->created_at?->toIso8601String(),
-            ])),
+            // Order events plus the shipment's delivery steps, so the history matches the tracking status.
+            'timeline' => $this->whenLoaded('statusHistories', fn () => OrderTimeline::forCustomer($this->resource)),
             'shipment' => $this->whenLoaded('shipment', fn () => $this->shipment ? [
                 'tracking_number' => $this->shipment->tracking_number,
                 'status' => $this->shipment->status->value,

@@ -12,6 +12,7 @@
 
 **Fixed**
 - The admin order page crashed for delivered orders with a proof photo (wrong route name).
+- The customer order history skipped the delivery steps, so it didn't match the "Out for delivery" tracking status; it now includes them (web and API).
 - The starter user screen (`/crud`) now follows Admin → Users rules: audited, strong passwords, roles replaced instead of added, no self-demotion, administrators cannot be deleted.
 
 ### 2026-11-16 — Phase 8 (System Integration)

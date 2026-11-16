@@ -163,7 +163,7 @@ class ShoppingController extends Controller
     {
         abort_unless($order->order()->value('user_id') === $request->user()->id, 404);
 
-        return new CustomerOrderResource($order->load(['order.address', 'shop:id,name,slug', 'items.review', 'statusHistories', 'shipment', 'refunds']));
+        return new CustomerOrderResource($order->load(['order.address', 'shop:id,name,slug', 'items.review', 'statusHistories', 'shipment.statusHistories', 'refunds']));
     }
 
     public function cancelOrder(Request $request, SellerOrder $order): CustomerOrderResource

@@ -535,6 +535,7 @@ If you only need the server, run `npm run build` once and then `php artisan serv
   - **Starter user screen (`/crud`) hardened:** it now uses the same `UserAccountService` as Admin → Users. Changes are audited, the 8-character letters-and-numbers password rule applies, roles are replaced instead of piling up, an admin cannot demote themself, and administrators (including yourself) cannot be deleted there. The screen itself is kept, as agents.md asks to preserve the template's features.
   - Rate limits added to refund requests (10/min), reviews (20/min), starting a chat (20/min), identity uploads (10/min) and seller applications (5/min).
   - Promotion edits and deletions are now audited (creation already was).
+  - **Customer order history now matches the tracking status** (reported on `/account/orders/5`): the tracking line showed the shipment's live status ("Out for delivery") while History listed only order events, so nothing appeared between "Shipping" and "Delivered". `App\Support\OrderTimeline` now merges the delivery steps into the history (rider assigned, rider at the shop, in transit, out for delivery, failed attempts with the rider's note, redelivery), without repeating events already listed and without internal logistics steps. The mobile API returns the same history. 3 tests in `OrderTimelineTest.php`.
   - Test reliability: the end-to-end test stamps password confirmation with the test clock.
 
 - **Browser responsive sweep on MySQL** (done after MySQL was restarted; it had been stopped, which made every page fail with a refused database connection — an environment issue, not an app bug):
@@ -548,7 +549,7 @@ If you only need the server, run `npm run build` once and then `php artisan serv
 
 ## Phase 9 testing results (2026-11-16)
 
-- `php artisan test`: **317 passed, 3442 assertions** (26 new in `tests/Feature/Phase9`: 8 permission sweep, 3 end-to-end, 15 security).
+- `php artisan test`: **320 passed, 3489 assertions** (29 new in `tests/Feature/Phase9`: 8 permission sweep, 3 end-to-end, 15 security, 3 order history).
 - `composer audit`: no advisories. `npm audit`: 0 vulnerabilities.
 - `vendor/bin/pint`: clean. `npm run build`: succeeds.
 - Browser responsive sweep on MySQL: 76 pages × 3 widths, all clean.
