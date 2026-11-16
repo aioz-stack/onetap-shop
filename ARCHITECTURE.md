@@ -122,6 +122,9 @@ storefront layout (top header + search + category nav + footer). Rider layout is
 
 ## 4. Authentication and authorization
 
+Security baseline (Phase 9): every response carries `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` and `Permissions-Policy` (HSTS over HTTPS) from `SecurityHeaders`; private files live on the `local` disk and are only streamed through authorized routes; `tests/Feature/Phase9/PermissionSweepTest.php` checks every route's guards from the live route table.
+
+
 - Login by **email or username**; registration for customers; seller onboarding = customer applies
   to open a shop (seller_profile + shop in `pending` until admin approves).
 - Riders are created by a logistics partner admin (and approved there). Logistics partner accounts

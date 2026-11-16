@@ -1,6 +1,6 @@
 # Onetap Marketplace — Development Log
 
-**Current phase:** Phase 8 (System Integration) is complete. Phase 9 (Testing and Finalization) is next.
+**Current phase:** Phase 9 (Testing and Finalization) is done: automated testing, the permission and security passes, fixes, and the browser responsive sweep on MySQL. Open: the timezone decision (yours) and the production deploy settings listed under Known issues.
 
 ## Setup
 
@@ -503,6 +503,56 @@ If you only need the server, run `npm run build` once and then `php artisan serv
   2. As customer Juan, bought a Buko Pie (₱350) with it: paid ₱389.00. MySQL shows commission ₱17.50 (5% of the full ₱350) and seller earning ₱332.50, so the seller wasn't charged for the voucher.
   3. As seller Maria, the bell showed "2 unread"; opening the new-order alert went to the order and marked it read. Accepted it and marked it ready for pickup.
   4. As Onetap Express, the bell showed "New pickup request" for `OTX261115770UXWB`. The dropdown fits at 375px with no overflow.
+## Phase 9 — Testing and Finalization — done (2026-11-16)
+
+**Done**
+- **Permission sweep** (`tests/Feature/Phase9/PermissionSweepTest.php`). It reads the live route table, so new routes are covered automatically:
+  - Every non-public route requires sign-in and an active account.
+  - Every panel and API area carries its role guard (plus the shop/partner check for sellers and logistics).
+  - Every web route runs the CSRF-protected `web` group and every API route is rate limited.
+  - Every parameter-free page (66) opens for its own role and returns 403 for the other four roles; guests go to login.
+  - Every API list endpoint returns 200 / 403 / 401 correctly.
+  - Suspended accounts, suspended partners and pending shops are locked out.
+  - Result: no permission holes found.
+- **End-to-end workflow** (`EndToEndWorkflowTest.php`, agents.md §16), driven through the real web routes of every panel:
+  - A customer orders 4 items (₱1,059 COD), the seller accepts and packs, Onetap Express assigns the rider, and the rider delivers with proof and cash.
+  - The customer confirms receipt; the rider remits and the partner confirms.
+  - After the 3-day hold the ₱950 earning becomes available. A ₱400 withdrawal is refused (₱500 minimum); ₱500 is approved and paid, leaving ₱450.
+  - Checked at every step: stock (10 → 6, nothing left reserved), each panel's view of the order, and ledger totals (earnings ₱950, commission ₱50, remittance ₱1,059, withdrawal ₱500).
+  - Also covered: a refund after completion (restock + earning clawback + refund ledger entry), and an admin cancelling a packed, assigned order (stock released, rider job closed; the shop itself is correctly refused).
+- **Security pass** (`SecurityTest.php`):
+  - Dependency audits: `composer audit` and `npm audit` report no known vulnerabilities.
+  - New `SecurityHeaders` middleware on every response: `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, a `Permissions-Policy` allowing camera and location for this site only, and HSTS over HTTPS.
+  - Private identity documents and proof photos are not served by `/storage/{path}` without a signed link.
+  - Uploads reject PHP files disguised as documents or images.
+  - Registration cannot grant itself a role.
+  - Search and price filters survive SQL-injection style input; HTML in product names is escaped.
+  - Bank account numbers are encrypted at rest and never sent to the browser (last 4 digits only); password hashes never appear in pages or the API.
+  - Customers cannot see or act on other customers' orders.
+  - Code scan: no raw SQL built from user input, no `dangerouslySetInnerHTML`, no models open to mass assignment, and every upload validates type and size.
+- **Fixes from this phase:**
+  - **Bug:** the admin order page crashed (500) for any delivered order with a proof photo, because it used the wrong route name (`admin.shipments.proof-photo` instead of `admin.logistics.shipments.proof-photo`). Introduced in Phase 7; the end-to-end test caught it.
+  - **Starter user screen (`/crud`) hardened:** it now uses the same `UserAccountService` as Admin → Users. Changes are audited, the 8-character letters-and-numbers password rule applies, roles are replaced instead of piling up, an admin cannot demote themself, and administrators (including yourself) cannot be deleted there. The screen itself is kept, as agents.md asks to preserve the template's features.
+  - Rate limits added to refund requests (10/min), reviews (20/min), starting a chat (20/min), identity uploads (10/min) and seller applications (5/min).
+  - Promotion edits and deletions are now audited (creation already was).
+  - Test reliability: the end-to-end test stamps password confirmation with the test clock.
+
+- **Browser responsive sweep on MySQL** (done after MySQL was restarted; it had been stopped, which made every page fail with a refused database connection — an environment issue, not an app bug):
+  - Every page of every role — 76 pages: guest 6, customer 15, seller 16 (finance pages after the password confirmation), logistics 10, rider 5, admin 24 including the starter `/crud` screen — loaded at **375, 768 and 1280 px** (228 loads), signed in as the demo account for each role.
+  - Each load checked: the Inertia page component is a real page (not an error page), the URL wasn't redirected (for example to login or the confirm-password screen), and nothing is wider than the viewport.
+  - Result: **all 228 loads clean.**
+  - The checker was verified first with known failures: a 404 page and a 403 page were flagged, and a planted 900 px element was detected. (A first run read Inertia v3's page data wrongly, so error pages could have slipped through; the overflow and redirect checks were valid. Every role was re-run with the corrected checker.)
+
+**Open**
+- The timezone decision (see Known issues). It needs your call.
+
+## Phase 9 testing results (2026-11-16)
+
+- `php artisan test`: **317 passed, 3442 assertions** (26 new in `tests/Feature/Phase9`: 8 permission sweep, 3 end-to-end, 15 security).
+- `composer audit`: no advisories. `npm audit`: 0 vulnerabilities.
+- `vendor/bin/pint`: clean. `npm run build`: succeeds.
+- Browser responsive sweep on MySQL: 76 pages × 3 widths, all clean.
+
 ## Known issues / notes
 
 - The migrations reached MySQL before the explicit `php artisan migrate` step: that step reported "Nothing to migrate" (all 15 already in batch 1). Nothing was dropped and the database was empty beforehand.
@@ -514,6 +564,8 @@ If you only need the server, run `npm run build` once and then `php artisan serv
 - Each logistics partner has a single operator account; there are no sub-users or dispatcher roles yet.
 - Storefront product images use `loading="lazy"`, so a browser tab that isn't on screen doesn't draw them (that's why the hidden test pane showed 0 loaded). This is expected behavior.
 - **The `general.timezone` setting is stored but not applied.** The app clock is still `config('app.timezone')` = UTC (for example, CSV file names use UTC). Switching the app timezone changes how existing timestamps are read, so it needs a deliberate decision.
+- **No Content-Security-Policy header yet.** Inertia's inline page data and the Vite dev server need a nonce-based policy; set one up for production. The other security headers are in place.
+- **Production settings to change at deploy:** `APP_DEBUG=false`, `APP_ENV=production`, `SESSION_SECURE_COOKIE=true` (HTTPS), optionally `SESSION_ENCRYPT=true`, a dedicated database user with a strong password (agents.md §3), real mail settings, and running the scheduler (`php artisan schedule:work` or cron) for earnings release.
 - Emails are written to the log locally (`MAIL_MAILER=log`). Real delivery needs SMTP or a mail service in `.env`.
 - Alerts are delivered when the page loads or the bell opens; there is no live push (websockets) yet, same as chat polling.
 - A platform voucher can make net revenue negative on an order (the voucher is larger than the commission). This is intended and shown in Finance.
@@ -534,11 +586,8 @@ If you only need the server, run `npm run build` once and then `php artisan serv
 - Rider pay is a flat amount per delivered parcel. Pickups, returns and failed attempts are not paid, and there is no payout screen for rider pay yet (it is shown as earnings only).
 - A rider can return a parcel to the shop after a failed attempt from the app; the logistics operator can also do it from the shipment page.
 
-## Next tasks (Phase 9: Testing and Finalization)
+## Next tasks
 
 - Decide the timezone question (apply `general.timezone` to the app clock) so "today" totals match Philippine time. This needs your decision.
-- Run the full workflow again across every panel on a fresh set of orders, including a refund and a withdrawal payout.
-- Permission sweep: every route by every role, and API tokens by role.
-- Security pass: rate limits, upload validation, private file access, audit log coverage, dependency audit.
-- Responsive pass on every page at phone, tablet and desktop widths.
-- Clean up the dev test data listed above if you want a tidy demo database (needs your approval; nothing is deleted automatically).
+- Optional, with your approval: clean up the dev test data listed above for a tidy demo database (nothing is deleted automatically).
+- Before going live: the production settings above and a Content-Security-Policy.

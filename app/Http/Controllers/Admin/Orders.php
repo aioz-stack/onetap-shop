@@ -126,7 +126,7 @@ class Orders extends Controller
                         'recipient_name' => $order->shipment->proof->recipient_name,
                         'recipient_relation' => $order->shipment->proof->recipient_relation,
                         'delivered_at' => $order->shipment->proof->delivered_at?->toIso8601String(),
-                        'photo_url' => route('admin.shipments.proof-photo', $order->shipment),
+                        'photo_url' => route('admin.logistics.shipments.proof-photo', $order->shipment),
                     ] : null,
                 ] : null,
                 'refunds' => $order->refunds->map(fn ($refund) => $refund->only(['id', 'reason', 'amount']) + ['status' => $refund->status->value]),

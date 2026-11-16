@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### 2026-11-16 — Phase 9 (Testing and Finalization)
+
+**Added**
+- Permission sweep, end-to-end workflow and security tests (26 tests in `tests/Feature/Phase9`).
+- `SecurityHeaders` middleware (frame, content-type, referrer and permissions policies; HSTS over HTTPS).
+- Rate limits on refund requests, reviews, starting a chat, identity uploads and seller applications.
+- Audit entries for promotion edits and deletions.
+
+**Fixed**
+- The admin order page crashed for delivered orders with a proof photo (wrong route name).
+- The starter user screen (`/crud`) now follows Admin → Users rules: audited, strong passwords, roles replaced instead of added, no self-demotion, administrators cannot be deleted.
+
 ### 2026-11-16 — Phase 8 (System Integration)
 
 **Added**

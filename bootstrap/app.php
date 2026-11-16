@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureLogisticsPartner;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureSellerShop;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -23,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);
+
+        // Baseline security headers on every response (web, API and error pages).
+        $middleware->append(SecurityHeaders::class);
 
         $middleware->alias([
             'role' => EnsureRole::class,

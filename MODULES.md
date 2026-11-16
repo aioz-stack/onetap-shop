@@ -36,4 +36,6 @@ Legend: ⬜ not started · 🟨 in progress · ✅ implemented **and tested**
 | API v1 | Auth, catalog, customer (shopping, refunds, reviews), seller, logistics, rider and notifications — see API_DOCUMENTATION.md | 2–8 | ✅ |
 | Notifications | Cross-panel alerts (in-app inbox + bell for every role, admin team email, optional user email) | 8 | ✅ |
 | Admin — Platform vouchers | Onetap-funded codes valid in any shop, once per order; net revenue reporting | 8 | ✅ |
-| End-to-end workflow | Order → seller → logistics → rider → delivered → COD → finance (runs on MySQL since Phase 7; full re-test in Phase 9) | 8–9 | 🟨 |
+| End-to-end workflow | Order → seller → logistics → rider → delivered → COD → remittance → earnings release → payout, plus refund clawback (automated through every panel's routes in Phase 9) | 8–9 | ✅ |
+| Permissions & security | Route-table permission sweep, security headers, private files, upload checks, rate limits, audits | 9 | ✅ |
+| Responsive pass | Every page of every role at 375 / 768 / 1280 px on MySQL (76 pages, all clean) | 9 | ✅ |

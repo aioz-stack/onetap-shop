@@ -113,8 +113,10 @@ class Marketing extends SellerController
     {
         abort_unless($promotion->shop_id === $this->shop($request)->id, 404);
         $validated = $this->validatedPromotion($request);
+        $old = ['percent' => $promotion->discount_percent, 'active' => $promotion->is_active, 'products' => $promotion->products()->pluck('products.id')->all()];
         $promotion->update(collect($validated)->except('product_ids')->all());
         $promotion->products()->sync($validated['product_ids']);
+        $this->auditLogger->log('promotion.updated', $promotion, $old, ['percent' => $promotion->discount_percent, 'active' => $promotion->is_active, 'products' => array_map('intval', $validated['product_ids'])]);
 
         return back()->with('success', 'Promotion updated.');
     }
@@ -122,6 +124,7 @@ class Marketing extends SellerController
     public function destroyPromotion(Request $request, Promotion $promotion): RedirectResponse
     {
         abort_unless($promotion->shop_id === $this->shop($request)->id, 404);
+        $this->auditLogger->log('promotion.deleted', $promotion, ['name' => $promotion->name, 'percent' => $promotion->discount_percent]);
         $promotion->delete();
 
         return back()->with('success', 'Promotion deleted. Past orders keep the prices customers paid.');

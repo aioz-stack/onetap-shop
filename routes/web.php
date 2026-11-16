@@ -47,8 +47,8 @@ Route::middleware(['auth', 'active', 'role:customer'])->group(function () {
         Route::get('orders/{order}', [Customer\Account\Orders::class, 'show'])->name('orders.show');
         Route::post('orders/{order}/cancel', [Customer\Account\Orders::class, 'cancel'])->name('orders.cancel');
         Route::post('orders/{order}/confirm', [Customer\Account\Orders::class, 'confirm'])->name('orders.confirm');
-        Route::post('orders/{order}/refund', [Customer\Account\Orders::class, 'refund'])->name('orders.refund');
-        Route::post('items/{item}/review', [Customer\Account\Orders::class, 'review'])->name('items.review');
+        Route::post('orders/{order}/refund', [Customer\Account\Orders::class, 'refund'])->middleware('throttle:10,1')->name('orders.refund');
+        Route::post('items/{item}/review', [Customer\Account\Orders::class, 'review'])->middleware('throttle:20,1')->name('items.review');
         Route::get('cancellations', [Customer\Account\Orders::class, 'cancellations'])->name('cancellations');
         Route::get('refunds', [Customer\Account\Orders::class, 'refunds'])->name('refunds');
         Route::get('reviews', [Customer\Account\Orders::class, 'reviews'])->name('reviews');
@@ -60,15 +60,15 @@ Route::middleware(['auth', 'active', 'role:customer'])->group(function () {
         Route::get('chat', [Customer\Account\Chat::class, 'index'])->name('chat.index');
         Route::get('chat/{conversation}', [Customer\Account\Chat::class, 'index'])->name('chat.show');
         Route::post('chat/{conversation}', [Customer\Account\Chat::class, 'send'])->middleware('throttle:30,1')->name('chat.send');
-        Route::post('chat/shops/{shop}', [Customer\Account\Chat::class, 'start'])->name('chat.start');
+        Route::post('chat/shops/{shop}', [Customer\Account\Chat::class, 'start'])->middleware('throttle:20,1')->name('chat.start');
 
         Route::get('security', [Customer\Account\Security::class, 'edit'])->name('security');
         Route::put('security/password', [Customer\Account\Security::class, 'password'])->name('security.password');
         Route::post('security/sign-out-others', [Customer\Account\Security::class, 'signOutOthers'])->name('security.sign-out-others');
         Route::get('verification', [Customer\Account\Security::class, 'verification'])->name('verification');
-        Route::post('verification', [Customer\Account\Security::class, 'uploadVerification'])->name('verification.store');
+        Route::post('verification', [Customer\Account\Security::class, 'uploadVerification'])->middleware('throttle:10,1')->name('verification.store');
         Route::get('sell', [Customer\Account\Security::class, 'sellerApplication'])->name('sell');
-        Route::post('sell', [Customer\Account\Security::class, 'applyToSell'])->name('sell.store');
+        Route::post('sell', [Customer\Account\Security::class, 'applyToSell'])->middleware('throttle:5,1')->name('sell.store');
     });
 });
 

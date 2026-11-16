@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\RoleName;
 use App\Models\LogisticsPartner;
 use App\Models\RiderProfile;
 use App\Models\Shop;
@@ -117,6 +116,11 @@ test('state-changing web routes are protected by CSRF and API routes are rate li
     $unthrottled = [];
 
     foreach (appRoutes() as $route) {
+        // Framework routes (health check, signed local-disk URLs) carry no app middleware on purpose.
+        if (in_array($route->uri(), ['up', 'storage/{path}'], true)) {
+            continue;
+        }
+
         $middleware = $route->gatherMiddleware();
 
         if (str_starts_with($route->uri(), 'api/')) {
@@ -182,6 +186,8 @@ test('every page without parameters opens for its role and is refused to everyon
         $checked++;
         $url = '/'.$uri;
 
+        auth()->forgetGuards();
+        $this->flushSession();
         $guest = $this->get($url);
         if (! $guest->isRedirect(url('/login'))) {
             $failures[] = "guest {$url} → {$guest->status()}";
@@ -191,7 +197,10 @@ test('every page without parameters opens for its role and is refused to everyon
             auth()->forgetGuards();
             $response = $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])->get($url);
             $allowed = in_array($role, allowedRoles($area), true);
-            $ok = $allowed ? $response->isOk() : $response->status() === 403;
+            // Allowed: the page itself, or a redirect to another page of the app (e.g. empty-cart checkout → cart).
+            $ok = $allowed
+                ? $response->isOk() || ($response->isRedirect() && ! str_contains((string) $response->headers->get('Location'), '/login'))
+                : $response->status() === 403;
 
             if (! $ok) {
                 $failures[] = "{$role} {$url} → {$response->status()} (expected ".($allowed ? '200' : '403').')';
@@ -272,9 +281,9 @@ test('a rider whose partner is suspended, and a seller whose shop is pending, ar
 test('the starter user screen follows the same safety rules as Admin → Users', function () {
     $this->withoutVite();
     $this->seed(RolesAndPermissionsSeeder::class);
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->create(['username' => 'sweepadmin']);
     $otherAdmin = User::factory()->admin()->create();
-    $customer = User::factory()->customer()->create();
+    $customer = User::factory()->customer()->create(['username' => 'sweepcustomer']);
 
     // Admins (including yourself) cannot be deleted from this screen.
     $this->actingAs($admin)->delete("/crud/{$admin->id}")->assertSessionHas('error');
