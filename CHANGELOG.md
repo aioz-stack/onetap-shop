@@ -13,6 +13,9 @@
 **Fixed**
 - The admin order page crashed for delivered orders with a proof photo (wrong route name).
 - The customer order history skipped the delivery steps, so it didn't match the "Out for delivery" tracking status; it now includes them (web and API).
+
+**Changed**
+- Product pages show the seller's shop above the product details: logo, name, city, products, rating, completed orders and join date, with **Chat seller** (guests are sent to sign in; hidden for staff) and **View shop** buttons. A seller viewing their own product gets a Seller Center link instead of a chat button.
 - The starter user screen (`/crud`) now follows Admin → Users rules: audited, strong passwords, roles replaced instead of added, no self-demotion, administrators cannot be deleted.
 
 ### 2026-11-16 — Phase 8 (System Integration)

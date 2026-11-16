@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Customer;
 
+use App\Enums\SellerOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductCardResource;
 use App\Http\Resources\ProductDetailResource;
@@ -96,7 +97,11 @@ class Catalog extends Controller
             )->resolve(),
             'shopStats' => [
                 'products' => $product->shop->products()->visible()->count(),
+                'orders_completed' => $product->shop->sellerOrders()->where('status', SellerOrderStatus::Completed)->count(),
+                'ratings' => (int) $product->shop->products()->sum('rating_count'),
             ],
+            // A seller can't chat with their own shop; the page links to the Seller Center instead.
+            'isOwnShop' => $request->user() !== null && $product->shop->sellerProfile()->value('user_id') === $request->user()->id,
         ]);
     }
 

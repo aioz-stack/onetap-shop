@@ -92,7 +92,76 @@ function Reviews({ product, reviews }) {
   );
 }
 
-export default function Product({ product, reviews, related, shopStats }) {
+/**
+ * The seller's shop, shown above the product details: who sells this, how they're doing,
+ * and quick ways to chat with them or browse the rest of their shop.
+ */
+function ShopInfo({ shop, stats, canChat, isOwnShop, signedIn }) {
+  const [opening, setOpening] = useState(false);
+  const chat = () => {
+    if (!signedIn) {
+      router.visit('/login');
+
+      return;
+    }
+
+    router.post(`/account/chat/shops/${shop.id}`, {}, { onStart: () => setOpening(true), onFinish: () => setOpening(false) });
+  };
+  const figures = [
+    { label: 'Products', value: formatNumber(stats.products) },
+    { label: 'Rating', value: shop.rating_avg > 0 ? `${shop.rating_avg.toFixed(1)} ★` : 'New', hint: stats.ratings > 0 ? `${formatNumber(stats.ratings)} ratings` : null },
+    { label: 'Orders completed', value: formatNumber(stats.orders_completed) },
+    { label: 'Joined', value: shop.joined_at ? formatDate(shop.joined_at, { month: 'short', year: 'numeric' }) : '—' },
+  ];
+
+  return (
+    <section aria-label="Seller" className="mt-8 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+        <div className="flex min-w-0 items-center gap-3 lg:w-80 lg:shrink-0">
+          <Link href={`/shops/${shop.slug}`} aria-label={`${shop.name} shop`}>
+            <ShopLogo shop={shop} size="h-14 w-14" />
+          </Link>
+          <div className="min-w-0">
+            <Link href={`/shops/${shop.slug}`} className="block truncate font-semibold text-gray-800 hover:text-brand-600 dark:text-white/90">
+              {shop.name}
+            </Link>
+            <p className="truncate text-xs text-gray-500">{shop.city ?? 'Local shop'}</p>
+            {shop.vacation_mode && <p className="mt-0.5 text-xs font-medium text-warning-600 dark:text-orange-400">On vacation</p>}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {canChat && (
+                <Button size="sm" loading={opening} onClick={chat}>
+                  Chat seller
+                </Button>
+              )}
+              <Button size="sm" variant="secondary" href={`/shops/${shop.slug}`}>
+                View shop
+              </Button>
+              {isOwnShop && (
+                <Button size="sm" variant="ghost" href="/seller">
+                  Your shop · Seller Center
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <dl className="grid flex-1 grid-cols-2 gap-x-4 gap-y-3 border-t border-gray-100 pt-4 sm:grid-cols-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0 dark:border-gray-800">
+          {figures.map((figure) => (
+            <div key={figure.label} className="min-w-0">
+              <dt className="text-xs text-gray-500">{figure.label}</dt>
+              <dd className="truncate text-sm font-semibold text-gray-800 dark:text-white/90">
+                {figure.value}
+                {figure.hint && <span className="ml-1 text-xs font-normal text-gray-500">({figure.hint})</span>}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  );
+}
+
+export default function Product({ product, reviews, related, shopStats, isOwnShop = false }) {
   const { auth } = usePage().props;
   const defaultVariation = product.variations.find((variation) => variation.is_default && variation.available > 0) ?? product.variations.find((variation) => variation.available > 0) ?? product.variations[0];
   const [variationId, setVariationId] = useState(defaultVariation?.id);
@@ -214,25 +283,10 @@ export default function Product({ product, reviews, related, shopStats }) {
           )}
 
           <p className="mt-4 text-xs text-gray-500">Cash on Delivery · Delivered by local Onetap riders</p>
-
-          <div className="mt-6 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-            <ShopLogo shop={product.shop} />
-            <div className="min-w-0 flex-1">
-              <Link href={`/shops/${product.shop.slug}`} className="font-semibold text-gray-800 hover:text-brand-600 dark:text-white/90">
-                {product.shop.name}
-              </Link>
-              <p className="text-xs text-gray-500">
-                {[product.shop.city, `${shopStats.products} products`, product.shop.rating_avg > 0 ? `${product.shop.rating_avg.toFixed(1)}★` : null].filter(Boolean).join(' · ')}
-              </p>
-            </div>
-            {isCustomer && (
-              <Button variant="secondary" size="sm" onClick={() => router.post(`/account/chat/shops/${product.shop.id}`)}>
-                Chat
-              </Button>
-            )}
-          </div>
         </div>
       </div>
+
+      <ShopInfo shop={product.shop} stats={shopStats} canChat={!isOwnShop && (!auth?.user || isCustomer)} isOwnShop={isOwnShop} signedIn={Boolean(auth?.user)} />
 
       {product.description && (
         <Card title="Product details" className="mt-8">
