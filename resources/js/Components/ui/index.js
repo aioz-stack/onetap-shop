@@ -12,3 +12,4 @@ export { default as StatCard } from './StatCard';
 export { EmptyState, ErrorState } from './States';
 export { default as Tabs } from './Tabs';
 export { default as Toast } from './Toast';
+export { default as Switch } from './Switch';

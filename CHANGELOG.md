@@ -15,6 +15,8 @@
 - The customer order history skipped the delivery steps, so it didn't match the "Out for delivery" tracking status; it now includes them (web and API).
 
 **Changed**
+- Seller automated replies: a new **off-work message** below the greeting, with working days and opening/closing times (overnight hours supported, read in the marketplace timezone). Customers who message outside those hours get it instead of the greeting, at most once every 12 hours per chat; vacation mode's away message still takes priority. Migration `2026_11_16_130000_add_schedule_to_shop_auto_replies` adds a nullable `schedule` column (applied to MySQL). 6 tests in `OffWorkMessageTest.php`.
+- Automated replies: **On/Off switches** in the top-right of the Greeting and Off-work message cards (new `Switch` component; `PATCH /seller/auto-replies/{reply}/active` changes only on/off). With nothing saved yet, switching the greeting on opens its form and switching the off-work message on saves it. Saving the off-work hours no longer changes its on/off state.
 - Product pages show the seller's shop above the product details: logo, name, city, products, rating, completed orders and join date, with **Chat seller** (guests are sent to sign in; hidden for staff) and **View shop** buttons. A seller viewing their own product gets a Seller Center link instead of a chat button.
 - The starter user screen (`/crud`) now follows Admin → Users rules: audited, strong passwords, roles replaced instead of added, no self-demotion, administrators cannot be deleted.
 

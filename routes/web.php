@@ -216,6 +216,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('auto-replies', [Seller\CustomerService::class, 'autoReplies'])->name('auto-replies.index');
         Route::post('auto-replies', [Seller\CustomerService::class, 'storeAutoReply'])->name('auto-replies.store');
         Route::put('auto-replies/{reply}', [Seller\CustomerService::class, 'updateAutoReply'])->name('auto-replies.update');
+        Route::patch('auto-replies/{reply}/active', [Seller\CustomerService::class, 'toggleAutoReply'])->name('auto-replies.toggle');
         Route::delete('auto-replies/{reply}', [Seller\CustomerService::class, 'destroyAutoReply'])->name('auto-replies.destroy');
         Route::get('reviews', [Seller\CustomerService::class, 'reviews'])->name('reviews.index');
         Route::post('reviews/{review}/reply', [Seller\CustomerService::class, 'replyToReview'])->name('reviews.reply');

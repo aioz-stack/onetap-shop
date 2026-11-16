@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Seller;
 use App\Models\Conversation;
 use App\Models\ProductReview;
 use App\Models\ShopAutoReply;
+use App\Services\Administration\SettingsService;
 use App\Services\Catalog\ReviewService;
 use App\Services\Communication\ChatService;
 use Illuminate\Http\RedirectResponse;
@@ -72,7 +73,9 @@ class CustomerService extends SellerController
     public function autoReplies(Request $request): Response
     {
         return Inertia::render('Seller/CustomerService/AutoReplies', [
-            'replies' => $this->shop($request)->autoReplies()->orderBy('type')->orderBy('id')->get()->map->only(['id', 'type', 'keyword', 'message', 'is_active']),
+            'replies' => $this->shop($request)->autoReplies()->orderBy('type')->orderBy('id')->get()->map->only(['id', 'type', 'keyword', 'message', 'schedule', 'is_active']),
+            // Working hours are read in the marketplace timezone (Settings → General).
+            'timezone' => (string) app(SettingsService::class)->get('general', 'timezone', 'Asia/Manila'),
         ]);
     }
 
@@ -96,6 +99,25 @@ class CustomerService extends SellerController
         $reply->update($this->validatedReply($request, $reply));
 
         return back()->with('success', 'Automated reply updated.');
+    }
+
+    /**
+     * The on/off switch on the automated replies page: changes nothing but `is_active`.
+     */
+    public function toggleAutoReply(Request $request, ShopAutoReply $reply): RedirectResponse
+    {
+        abort_unless($reply->shop_id === $this->shop($request)->id, 404);
+        $validated = $request->validate(['is_active' => ['required', 'boolean']]);
+        $reply->update(['is_active' => (bool) $validated['is_active']]);
+
+        $name = match ($reply->type) {
+            'greeting' => 'Greeting',
+            'off_work' => 'Off-work message',
+            'offline' => 'Away message',
+            default => 'Automated reply',
+        };
+
+        return back()->with('success', $reply->is_active ? "{$name} turned on." : "{$name} turned off.");
     }
 
     public function destroyAutoReply(Request $request, ShopAutoReply $reply): RedirectResponse
@@ -150,11 +172,34 @@ class CustomerService extends SellerController
      */
     private function validatedReply(Request $request, ?ShopAutoReply $reply = null): array
     {
-        return $request->validate([
-            'type' => [$reply ? 'prohibited' : 'required', Rule::in(['greeting', 'offline', 'keyword'])],
-            'keyword' => [Rule::requiredIf(fn () => ($reply?->type ?? $request->input('type')) === 'keyword'), 'nullable', 'string', 'max:50'],
+        $type = $reply?->type ?? $request->input('type');
+        $offWork = $type === 'off_work';
+
+        $validated = $request->validate([
+            'type' => [$reply ? 'prohibited' : 'required', Rule::in(['greeting', 'off_work', 'offline', 'keyword'])],
+            'keyword' => [Rule::requiredIf(fn () => $type === 'keyword'), 'nullable', 'string', 'max:50'],
             'message' => ['required', 'string', 'max:500'],
             'is_active' => ['boolean'],
-        ], ['type.prohibited' => 'The reply type cannot be changed.']);
+            // Working hours, only for the off-work message.
+            'days' => [Rule::requiredIf($offWork), Rule::excludeIf(! $offWork), 'array', 'min:1'],
+            'days.*' => ['integer', 'between:1,7', 'distinct'],
+            'start' => [Rule::requiredIf($offWork), Rule::excludeIf(! $offWork), 'date_format:H:i'],
+            'end' => [Rule::requiredIf($offWork), Rule::excludeIf(! $offWork), 'date_format:H:i', 'different:start'],
+        ], [
+            'type.prohibited' => 'The reply type cannot be changed.',
+            'days.required' => 'Choose at least one working day.',
+            'days.min' => 'Choose at least one working day.',
+            'end.different' => 'Closing time must differ from opening time.',
+        ]);
+
+        if ($offWork) {
+            $days = array_map('intval', $validated['days']);
+            sort($days);
+            $validated['schedule'] = ['days' => $days, 'start' => $validated['start'], 'end' => $validated['end']];
+        }
+
+        unset($validated['days'], $validated['start'], $validated['end']);
+
+        return $validated;
     }
 }

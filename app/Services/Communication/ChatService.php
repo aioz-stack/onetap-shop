@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Shop;
 use App\Models\User;
+use App\Services\Administration\SettingsService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -82,8 +83,9 @@ class ChatService
 
     /**
      * Automated shop replies to customer messages:
-     * the greeting on a new conversation, the away message while on vacation,
-     * and the first keyword reply whose keyword appears in the message.
+     * the away message while on vacation, otherwise the off-work message outside working hours
+     * (at most once per 12 hours), otherwise the greeting on a new conversation; plus the first
+     * keyword reply whose keyword appears in the message.
      */
     private function autoReply(Conversation $conversation, Message $message, bool $isFirstMessage): void
     {
@@ -97,9 +99,22 @@ class ChatService
         $replies = $shop->autoReplies()->where('is_active', true)->get();
         $text = mb_strtolower((string) $message->body);
         $send = fn (string $body) => $conversation->messages()->create(['user_id' => $ownerId, 'body' => $body, 'is_auto_reply' => true]);
+        $offWork = $replies->firstWhere('type', 'off_work');
+        $closedNow = $offWork && ! $offWork->isWithinWorkingHours(now()->setTimezone($this->shopTimezone()));
 
         if ($shop->vacation_mode && ($away = $replies->firstWhere('type', 'offline'))) {
             $send($away->message);
+        } elseif ($closedNow) {
+            // Outside working hours: tell the customer once per 12 hours, not on every message.
+            $recentlySent = $conversation->messages()
+                ->where('is_auto_reply', true)
+                ->where('body', $offWork->message)
+                ->where('created_at', '>=', now()->subHours(12))
+                ->exists();
+
+            if (! $recentlySent) {
+                $send($offWork->message);
+            }
         } elseif ($isFirstMessage && ($greeting = $replies->firstWhere('type', 'greeting'))) {
             $send($greeting->message);
         }
@@ -109,6 +124,16 @@ class ChatService
         if ($keyword) {
             $send($keyword->message);
         }
+    }
+
+    /**
+     * Shops' working hours are local time: the marketplace timezone setting (Asia/Manila by default).
+     */
+    private function shopTimezone(): string
+    {
+        $timezone = (string) app(SettingsService::class)->get('general', 'timezone', 'Asia/Manila');
+
+        return in_array($timezone, timezone_identifiers_list(), true) ? $timezone : 'Asia/Manila';
     }
 
     /**
