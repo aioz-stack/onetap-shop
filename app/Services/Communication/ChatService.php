@@ -67,6 +67,20 @@ class ChatService
         $conversation->participants()->updateExistingPivot($user->id, ['last_read_at' => now()]);
     }
 
+    /**
+     * Messages from the other side that this user hasn't seen yet. Automated shop replies are sent
+     * under the seller's account, so they never hide an unread customer message from the seller.
+     */
+    public function unreadIn(Conversation $conversation, User $user): int
+    {
+        $readAt = $conversation->participants()->whereKey($user->id)->first()?->pivot?->last_read_at;
+
+        return $conversation->messages()
+            ->where('user_id', '!=', $user->id)
+            ->when($readAt, fn ($query) => $query->where('created_at', '>', $readAt))
+            ->count();
+    }
+
     public function assertParticipant(Conversation $conversation, User $user): void
     {
         abort_unless($conversation->participants()->whereKey($user->id)->exists(), 404);

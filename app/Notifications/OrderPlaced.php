@@ -3,10 +3,13 @@
 namespace App\Notifications;
 
 use App\Models\Order;
+use App\Notifications\Concerns\PushesToDevices;
 use Illuminate\Notifications\Notification;
 
 class OrderPlaced extends Notification
 {
+    use PushesToDevices;
+
     public function __construct(public Order $order) {}
 
     /**
@@ -14,7 +17,7 @@ class OrderPlaced extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return $this->withPush(['database'], $notifiable);
     }
 
     /**

@@ -197,6 +197,7 @@ erDiagram
 | 2026-11-16 | `2026_11_16_110000_add_voucher_id_to_seller_orders` | seller_orders.voucher_id (FK vouchers, null on delete), batch 3 |
 | 2026-11-16 | `2026_11_16_120000_create_rider_shifts_and_rider_pay` | rider_shifts table; logistics_partners.rider_fee_per_delivery decimal(14,2) default 0 |
 | 2026-11-16 | `2026_11_16_130000_add_schedule_to_shop_auto_replies` | shop_auto_replies.schedule json null (working hours for the off-work message) |
+| 2026-11-16 | `2026_11_16_140000_create_device_tokens_and_token_confirmation` | device_tokens (user_id FK cascade, app [customer/seller/rider], platform [android/ios], token, token_hash sha256 unique, last_used_at; index(user_id, app)); personal_access_tokens.password_confirmed_at timestamp null (per-token password confirmation for seller finance) |
 
 The first 15 are in batch 1 on `onetap-shop` (63 tables). Additions from the table list above: `promotion_products`, `voucher_redemptions`, `shop_auto_replies`, `banners`, and `bank_accounts.account_last4` (the full number is stored with an encrypted cast).
 

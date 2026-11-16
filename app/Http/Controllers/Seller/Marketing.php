@@ -101,7 +101,7 @@ class Marketing extends SellerController
     public function storePromotion(Request $request): RedirectResponse
     {
         $shop = $this->shop($request);
-        $validated = $this->validatedPromotion($request);
+        $validated = self::validatedPromotion($request, $this->shop($request)->id);
         $promotion = Promotion::query()->create(collect($validated)->except('product_ids')->all() + ['shop_id' => $shop->id]);
         $promotion->products()->sync($validated['product_ids']);
         $this->auditLogger->log('promotion.created', $promotion, newValues: ['percent' => $promotion->discount_percent]);
@@ -112,7 +112,7 @@ class Marketing extends SellerController
     public function updatePromotion(Request $request, Promotion $promotion): RedirectResponse
     {
         abort_unless($promotion->shop_id === $this->shop($request)->id, 404);
-        $validated = $this->validatedPromotion($request);
+        $validated = self::validatedPromotion($request, $this->shop($request)->id);
         $old = ['percent' => $promotion->discount_percent, 'active' => $promotion->is_active, 'products' => $promotion->products()->pluck('products.id')->all()];
         $promotion->update(collect($validated)->except('product_ids')->all());
         $promotion->products()->sync($validated['product_ids']);
@@ -176,10 +176,8 @@ class Marketing extends SellerController
     /**
      * @return array<string, mixed>
      */
-    private function validatedPromotion(Request $request): array
+    public static function validatedPromotion(Request $request, int $shopId): array
     {
-        $shopId = $this->shop($request)->id;
-
         return $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'discount_percent' => ['required', 'numeric', 'min:1', 'max:90'],

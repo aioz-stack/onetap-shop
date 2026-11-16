@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\RoleName;
+use App\Enums\SellerStatus;
 use App\Enums\UserStatus;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -129,6 +130,41 @@ class User extends Authenticatable
     public function addresses(): HasMany
     {
         return $this->hasMany(UserAddress::class);
+    }
+
+    /**
+     * Phones registered for push notifications by the mobile apps.
+     *
+     * @return HasMany<DeviceToken, $this>
+     */
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    /**
+     * Which mobile apps this account can sign in to.
+     *
+     * @return list<string>
+     */
+    public function mobileApps(): array
+    {
+        $apps = [];
+
+        if ($this->hasRole(RoleName::Customer)) {
+            $apps[] = 'customer';
+        }
+
+        $profile = $this->sellerProfile()->with('shop')->first();
+        if ($this->hasRole(RoleName::Seller) && $profile?->status === SellerStatus::Approved && $profile->shop) {
+            $apps[] = 'seller';
+        }
+
+        if ($this->hasRole(RoleName::Rider) && $this->riderProfile()->exists()) {
+            $apps[] = 'rider';
+        }
+
+        return $apps;
     }
 
     /**

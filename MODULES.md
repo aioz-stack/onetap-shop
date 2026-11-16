@@ -34,6 +34,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ implemented **and tested**
 | Rider — Proof of Delivery | Photo capture/upload, recipient, timestamp, GPS | 7 | ✅ |
 | Rider — COD | Collection, daily remittance, history, discrepancies | 7 | ✅ |
 | API v1 | Auth, catalog, customer (shopping, refunds, reviews), seller, logistics, rider and notifications — see API_DOCUMENTATION.md | 2–8 | ✅ |
+| Mobile API readiness | Customer, seller and rider apps: per-app sign-in, password reset by code, account deletion, push device registration, chat, every web feature of each app over the API (117 routes) | post-9 | ✅ (Firebase delivery pending credentials) |
 | Notifications | Cross-panel alerts (in-app inbox + bell for every role, admin team email, optional user email) | 8 | ✅ |
 | Admin — Platform vouchers | Onetap-funded codes valid in any shop, once per order; net revenue reporting | 8 | ✅ |
 | End-to-end workflow | Order → seller → logistics → rider → delivered → COD → remittance → earnings release → payout, plus refund clawback (automated through every panel's routes in Phase 9) | 8–9 | ✅ |

@@ -3,10 +3,13 @@
 namespace App\Notifications;
 
 use App\Models\DeliveryAssignment;
+use App\Notifications\Concerns\PushesToDevices;
 use Illuminate\Notifications\Notification;
 
 class DeliveryAssigned extends Notification
 {
+    use PushesToDevices;
+
     public function __construct(public DeliveryAssignment $assignment) {}
 
     /**
@@ -14,7 +17,7 @@ class DeliveryAssigned extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return $this->withPush(['database'], $notifiable);
     }
 
     /**

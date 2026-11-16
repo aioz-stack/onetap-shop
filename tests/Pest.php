@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Tests\TestCase;
 
 /*
@@ -46,4 +47,26 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Mobile API: sign in like an app does (POST /api/v1/auth/login with `app`) and return the bearer token.
+ */
+function appLogin($test, User $user, string $app, string $password = 'password'): string
+{
+    app('auth')->forgetGuards();
+
+    return $test->postJson('/api/v1/auth/login', ['login' => $user->email, 'password' => $password, 'app' => $app, 'device_name' => 'Test phone'])
+        ->assertOk()
+        ->json('token');
+}
+
+/**
+ * Mobile API: send the next request with this bearer token (fresh guard, like a separate app request).
+ */
+function withBearer($test, string $token)
+{
+    app('auth')->forgetGuards();
+
+    return $test->withToken($token);
 }

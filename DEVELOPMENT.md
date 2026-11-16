@@ -587,6 +587,27 @@ If you only need the server, run `npm run build` once and then `php artisan serv
 - Rider pay is a flat amount per delivered parcel. Pickups, returns and failed attempts are not paid, and there is no payout screen for rider pay yet (it is shown as earnings only).
 - A rider can return a parcel to the shop after a failed attempt from the app; the logistics operator can also do it from the shipment page.
 
+## Mobile API readiness — done (2026-11-16)
+
+The API now covers what the **customer, seller and rider** apps need. API_DOCUMENTATION.md is the guide for the
+mobile developers, organised by app.
+
+- **Sign-in per app:** `POST /auth/login` with `app`; accounts that can't use that app get 403 `app_not_allowed`. `/auth/me` lists `apps[]` and summarises the seller's shop or the rider profile.
+- **Account (all apps):** profile and photo, password change (keeps this phone signed in), sign out of all devices, forgot/reset password with a 6-digit emailed code, and **account deletion** (required by the App Store and Google Play): refused while orders, shop money/payouts, rider jobs or cash are open; otherwise anonymizes the person and revokes all access, keeping order and money records.
+- **Seller finance on phones** needs `POST /auth/confirm-password` (per token, 3 hours), mirroring the web password confirmation.
+- **Push:** phones register with `POST /devices`; every alert is pushed to the matching app. The driver writes pushes to the log for now.
+- **Customer app:** home feed, chat with shops, reviews (pending and written), identity verification, seller application — on top of catalog, cart, checkout, orders and refunds.
+- **Seller app:** shop settings, inventory, chat inbox, review replies, automated replies, finance, vouchers, promotions, referrals — on top of products and orders.
+- **Rider app:** profile, phone, shift log, delivery tabs with counts — on top of jobs, proof of delivery and COD.
+- Shop settings and finance logic moved into shared services, so the web Seller Center and the API can't drift apart.
+- Found and fixed while testing: the seller inbox could show a chat as read when an automated reply followed a customer message (web and API); creating a voucher or promotion without `is_active` crashed in the API.
+- Tests: 27 in `tests/Feature/MobileApi`, all real-token requests. Full suite **357 passed**. The permission sweep covers the new routes automatically (and confirms seller finance answers 423 until the password is confirmed).
+
+**For the mobile team / before release**
+- Phones on the same Wi-Fi: `php artisan serve --host=0.0.0.0 --port=8000` and `APP_URL=http://<LAN IP>:8000` so image URLs work from the phone.
+- **Firebase push:** create a Firebase project, add the service-account JSON to the server, and add an FCM driver to `PushChannel::deliver()`. The Google API client package this needs has to be approved first (dependency change).
+- Real email (`MAIL_*` in `.env`) is required for password reset codes to reach people; locally they go to the log.
+
 ## Next tasks
 
 - Decide the timezone question (apply `general.timezone` to the app clock) so "today" totals match Philippine time. This needs your decision.

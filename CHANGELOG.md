@@ -2,6 +2,28 @@
 
 ## [Unreleased]
 
+### 2026-11-16 — API ready for the customer, seller and rider mobile apps
+
+**Added**
+- Per-app sign-in (`app: customer|seller|rider`, 403 `app_not_allowed` for accounts that can't use that app); tokens named `<app>:<device>`; richer `/auth/me` (`apps[]`, seller shop and rider summaries).
+- Sign out of all devices; forgot/reset password with a 6-digit emailed code (15 minutes, 5 tries, no account discovery); password change that keeps the current phone signed in.
+- Per-token password confirmation (`POST /auth/confirm-password`, `api.password.confirmed` middleware, 423 `password_confirmation_required`) guarding seller finance, like the web "confirm password" step.
+- In-app account deletion with blockers (open orders, shop money/payouts, rider jobs/cash; staff excluded) that anonymizes personal details and revokes all access.
+- Push-notification groundwork: `device_tokens` table, `POST/DELETE /devices`, a `PushChannel` that sends every in-app alert to the right app (log driver until Firebase credentials are added).
+- Public `/config` and `/home` endpoints.
+- Customer app: chat with shops (shared with the seller inbox, polling with `after_id`), pending and written reviews, identity verification upload, "Sell on Onetap" application.
+- Seller app: shop profile, branding and vacation; inventory; review replies; automated replies (incl. off-work hours and on/off); finance overview, statement, transactions, bank accounts and withdrawals; vouchers, promotions and referrals.
+- Rider app: profile, phone update, shift log, and the web app's delivery tabs (`?tab=`, per-tab counts, search).
+- Migration `2026_11_16_140000_create_device_tokens_and_token_confirmation` (applied to MySQL).
+- 27 tests in `tests/Feature/MobileApi`; API_DOCUMENTATION.md rewritten as a per-app guide for the mobile team.
+
+**Changed**
+- Seller shop settings and finance logic moved into `ShopProfileService` and `SellerFinanceService`, shared by the Seller Center and the API.
+- Chat "unread" now counts messages from the other side since the chat was last opened, so an automated shop reply no longer hides an unread customer message (web seller inbox too).
+
+**Fixed**
+- Creating a voucher or promotion without `is_active` returned a 500 from the API (the new record wasn't reloaded).
+
 ### 2026-11-16 — Phase 9 (Testing and Finalization)
 
 **Added**

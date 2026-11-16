@@ -6,6 +6,7 @@ use App\Enums\AssignmentStatus;
 use App\Enums\ShipmentStatus;
 use App\Http\Requests\CompleteDeliveryRequest;
 use App\Models\DeliveryAssignment;
+use App\Models\RiderProfile;
 use App\Models\Shipment;
 use App\Services\Logistics\DeliveryService;
 use App\Support\ProofPhoto;
@@ -38,11 +39,11 @@ class Deliveries extends RiderController
         $counts = [];
 
         foreach (array_keys(self::TABS) as $key) {
-            $counts[$key] = $this->scoped($rider, $key)->count();
+            $counts[$key] = self::scoped($rider, $key)->count();
         }
 
         return Inertia::render('Rider/Deliveries/Index', [
-            'jobs' => $this->scoped($rider, $tab)
+            'jobs' => self::scoped($rider, $tab)
                 ->when($search !== '', fn ($query) => $query->whereHas('shipment', fn ($shipments) => $shipments->where('tracking_number', 'like', "%{$search}%")))
                 ->when($tab === 'history', fn ($query) => $query->latest('updated_at'), fn ($query) => $query->oldest('id'))
                 ->paginate(15)
@@ -101,7 +102,7 @@ class Deliveries extends RiderController
     /**
      * @return Builder<DeliveryAssignment>
      */
-    private function scoped($rider, string $tab)
+    public static function scoped(RiderProfile $rider, string $tab)
     {
         $query = RiderJobs::query($rider);
         $statuses = fn (array $statuses) => fn ($shipments) => $shipments->whereIn('status', $statuses);

@@ -39,12 +39,13 @@ const API_AREAS = [
     'api/v1/orders' => ['role:customer'],
     'api/v1/order-items' => ['role:customer'],
     'api/v1/refunds' => ['role:customer'],
+    'api/v1/reviews' => ['role:customer'],
 ];
 
 /** Routes that are public on purpose. */
 const PUBLIC_ROUTES = [
     '/', 'search', 'products/{slug}', 'shops/{slug}', 'login', 'register', '{fallbackPlaceholder}',
-    'api/v1/auth/login', 'api/v1/auth/register', 'api/v1/categories', 'api/v1/products', 'api/v1/products/{slug}', 'api/v1/shops', 'api/v1/shops/{slug}',
+    'api/v1/auth/login', 'api/v1/auth/register', 'api/v1/auth/password/forgot', 'api/v1/auth/password/reset', 'api/v1/config', 'api/v1/home', 'api/v1/categories', 'api/v1/products', 'api/v1/products/{slug}', 'api/v1/shops', 'api/v1/shops/{slug}',
     'up', 'storage/{path}', 'sanctum/csrf-cookie',
 ];
 
@@ -222,6 +223,7 @@ test('every API list endpoint answers its role and refuses the others', function
         'api/v1/cart' => ['customer', 'seller'],
         'api/v1/orders' => ['customer', 'seller'],
         'api/v1/refunds' => ['customer', 'seller'],
+        'api/v1/reviews' => ['customer', 'seller'],
     ];
     $failures = [];
 
@@ -242,7 +244,9 @@ test('every API list endpoint answers its role and refuses the others', function
             app('auth')->forgetGuards();
             Sanctum::actingAs($user);
             $status = $this->getJson('/'.$uri)->status();
-            $expected = in_array($role, $roleFor[$area], true) ? 200 : 403;
+            // Seller finance additionally needs a recent password confirmation on the token (423 until then).
+            $allowed = in_array($role, $roleFor[$area], true);
+            $expected = ! $allowed ? 403 : (str_starts_with($uri, 'api/v1/seller/finance') ? 423 : 200);
 
             if ($status !== $expected) {
                 $failures[] = "{$role} {$uri} → {$status} (expected {$expected})";

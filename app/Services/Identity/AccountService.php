@@ -53,26 +53,29 @@ class AccountService
         return $user;
     }
 
-    public function changePassword(User $user, string $current, string $new, ?string $keepSessionId = null): void
+    /**
+     * @param  int|null  $keepTokenId  the API token making the change (the phone stays signed in)
+     */
+    public function changePassword(User $user, string $current, string $new, ?string $keepSessionId = null, ?int $keepTokenId = null): void
     {
         if (! Hash::check($current, $user->password)) {
             throw ValidationException::withMessages(['current_password' => 'Your current password is incorrect.']);
         }
 
-        DB::transaction(function () use ($user, $new, $keepSessionId) {
+        DB::transaction(function () use ($user, $new, $keepSessionId, $keepTokenId) {
             $user->forceFill(['password' => $new])->save();
-            $this->signOutOtherDevices($user, $keepSessionId);
+            $this->signOutOtherDevices($user, $keepSessionId, $keepTokenId);
         });
 
         $this->auditLogger->log('account.password_changed', $user, actor: $user);
     }
 
     /**
-     * End every other browser session and revoke all API tokens.
+     * End every other browser session and revoke API tokens (except the one making the request, if given).
      */
-    public function signOutOtherDevices(User $user, ?string $keepSessionId): int
+    public function signOutOtherDevices(User $user, ?string $keepSessionId, ?int $keepTokenId = null): int
     {
-        $user->tokens()->delete();
+        $user->tokens()->when($keepTokenId, fn ($query) => $query->whereKeyNot($keepTokenId))->delete();
 
         return DB::table('sessions')
             ->where('user_id', $user->id)

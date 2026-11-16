@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    /*
+    | Mobile push notifications. "log" writes each push to the application log (development);
+    | "none" turns pushes off. A provider driver (e.g. Firebase Cloud Messaging) plugs into
+    | App\Notifications\Channels\PushChannel once its credentials are available.
+    */
+    'push' => [
+        'driver' => env('PUSH_DRIVER', 'log'),
+    ],
+
 ];

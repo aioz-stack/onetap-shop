@@ -107,11 +107,27 @@ class Security extends Controller
         ]);
     }
 
+    public const BUSINESS_TYPES = ['sole_proprietor', 'partnership', 'corporation', 'cooperative', 'home_based'];
+
     public function applyToSell(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
+        $validated = $request->validate(self::sellerApplicationRules(), self::sellerApplicationMessages());
+
+        $this->accounts->applyToSell($request->user(), $validated);
+
+        return back()->with('success', 'Application submitted. We will email you once it is reviewed.');
+    }
+
+    /**
+     * "Sell on Onetap" application rules, shared with the customer app API.
+     *
+     * @return array<string, mixed>
+     */
+    public static function sellerApplicationRules(): array
+    {
+        return [
             'business_name' => ['required', 'string', 'max:255'],
-            'business_type' => ['required', Rule::in(['sole_proprietor', 'partnership', 'corporation', 'cooperative', 'home_based'])],
+            'business_type' => ['required', Rule::in(self::BUSINESS_TYPES)],
             'tin' => ['nullable', 'string', 'max:30'],
             'shop_name' => ['required', 'string', 'max:100'],
             'shop_category_id' => ['nullable', 'exists:shop_categories,id'],
@@ -123,10 +139,14 @@ class Security extends Controller
             'pickup_region' => ['required', 'string', 'max:100'],
             'pickup_phone' => ['required', 'string', 'regex:/^(\+63|0)9\d{9}$/'],
             'agree' => ['accepted'],
-        ], ['pickup_phone.regex' => 'Enter a valid Philippine mobile number.', 'agree.accepted' => 'Please accept the seller policies.']);
+        ];
+    }
 
-        $this->accounts->applyToSell($request->user(), $validated);
-
-        return back()->with('success', 'Application submitted. We will email you once it is reviewed.');
+    /**
+     * @return array<string, string>
+     */
+    public static function sellerApplicationMessages(): array
+    {
+        return ['pickup_phone.regex' => 'Enter a valid Philippine mobile number.', 'agree.accepted' => 'Please accept the seller policies.'];
     }
 }

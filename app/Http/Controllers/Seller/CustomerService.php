@@ -34,14 +34,14 @@ class CustomerService extends SellerController
         $conversations = $this->chat->shopInbox($shop)->map(function (Conversation $item) use ($user) {
             $customer = $item->participants->firstWhere('id', '!=', $user->id);
             $last = $item->messages->first();
-            $readAt = $item->participants->firstWhere('id', $user->id)?->pivot?->last_read_at;
 
             return [
                 'id' => $item->id,
                 'customer' => $customer?->name ?? 'Customer',
                 'last_message' => $last?->body,
                 'last_message_at' => $item->last_message_at?->toIso8601String(),
-                'unread' => $last && $last->user_id !== $user->id && (! $readAt || $last->created_at > $readAt),
+                // Counts customer messages since the seller last opened the chat (an automated reply doesn't hide them).
+                'unread' => $this->chat->unreadIn($item, $user) > 0,
             ];
         });
 
@@ -82,7 +82,7 @@ class CustomerService extends SellerController
     public function storeAutoReply(Request $request): RedirectResponse
     {
         $shop = $this->shop($request);
-        $validated = $this->validatedReply($request);
+        $validated = self::validatedReply($request);
 
         if ($validated['type'] !== 'keyword' && $shop->autoReplies()->where('type', $validated['type'])->exists()) {
             return back()->withErrors(['type' => 'You already have one. Edit it instead.']);
@@ -96,7 +96,7 @@ class CustomerService extends SellerController
     public function updateAutoReply(Request $request, ShopAutoReply $reply): RedirectResponse
     {
         abort_unless($reply->shop_id === $this->shop($request)->id, 404);
-        $reply->update($this->validatedReply($request, $reply));
+        $reply->update(self::validatedReply($request, $reply));
 
         return back()->with('success', 'Automated reply updated.');
     }
@@ -170,7 +170,7 @@ class CustomerService extends SellerController
     /**
      * @return array<string, mixed>
      */
-    private function validatedReply(Request $request, ?ShopAutoReply $reply = null): array
+    public static function validatedReply(Request $request, ?ShopAutoReply $reply = null): array
     {
         $type = $reply?->type ?? $request->input('type');
         $offWork = $type === 'off_work';

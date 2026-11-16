@@ -4,10 +4,13 @@ namespace App\Notifications;
 
 use App\Enums\SellerOrderStatus;
 use App\Models\SellerOrder;
+use App\Notifications\Concerns\PushesToDevices;
 use Illuminate\Notifications\Notification;
 
 class OrderStatusUpdated extends Notification
 {
+    use PushesToDevices;
+
     public function __construct(public SellerOrder $sellerOrder) {}
 
     /**
@@ -32,7 +35,7 @@ class OrderStatusUpdated extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return $this->withPush(['database'], $notifiable);
     }
 
     /**

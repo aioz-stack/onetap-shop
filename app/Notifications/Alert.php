@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\PushesToDevices;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -12,6 +13,8 @@ use Illuminate\Notifications\Notification;
  */
 class Alert extends Notification
 {
+    use PushesToDevices;
+
     /**
      * @param  array<string, mixed>  $meta
      */
@@ -33,7 +36,7 @@ class Alert extends Notification
             return ['mail'];
         }
 
-        return $this->mail && filled($notifiable->email ?? null) ? ['database', 'mail'] : ['database'];
+        return $this->withPush($this->mail && filled($notifiable->email ?? null) ? ['database', 'mail'] : ['database'], $notifiable);
     }
 
     public function toMail(object $notifiable): MailMessage
